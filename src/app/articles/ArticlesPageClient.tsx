@@ -9,6 +9,7 @@ import Footer from '@/components/Footer';
 import ImageWithFallback from '@/components/ImageWithFallback';
 import WriteArticleCTA from '@/components/WriteArticleCTA';
 import { getCategoryConfig } from '@/data/articleCategories';
+import { API_BASE } from '@/lib/apiBase';
 import type { ApiCategory } from '@/lib/articleService';
 import type { ArticlePageArticle } from '@/types';
 import type { ApiArticle } from '@/types/articleApi';
@@ -73,6 +74,12 @@ function ArticleRow({
 }
 
 function apiArticleToPageArticle(a: ApiArticle): ArticlePageArticle {
+  const coverImage = a.cover_image
+    ? (a.cover_image.startsWith('http://') || a.cover_image.startsWith('https://')
+      ? a.cover_image
+      : `${API_BASE}${a.cover_image.startsWith('/') ? a.cover_image : `/${a.cover_image}`}`)
+    : undefined;
+
   return {
     id: a.id,
     slug: a.slug,
@@ -81,7 +88,7 @@ function apiArticleToPageArticle(a: ApiArticle): ArticlePageArticle {
     category: a.category as ArticlePageArticle['category'],
     title: a.title,
     excerpt: a.excerpt,
-    coverImage: a.cover_image || undefined,
+    coverImage,
     updatedDays: a.updated_days,
     upvoteCount: a.upvote_count,
   };
@@ -249,38 +256,52 @@ export default function ArticlesPageClient({ initialArticles, initialNext, categ
         </header>
 
         <div className="sticky top-16 z-30 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 py-4 border-b border-[rgba(30,41,59,0.1)]" style={{ backgroundColor: '#fff8eb' }}>
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex flex-wrap gap-2">
-              <button onClick={() => setCategory(null)} className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${!activeCategory ? 'bg-[#991b1b] text-white' : 'bg-white text-[#1e293b] hover:bg-[#fbf2f3]'}`}>
-                All
-              </button>
-              {categories.map((c) => (
-                <button key={c.slug} onClick={() => setCategory(c.slug)} className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${activeCategory === c.slug ? 'bg-[#991b1b] text-white' : 'bg-white text-[#1e293b] hover:bg-[#fbf2f3]'}`}>
-                  {c.name}
-                </button>
-              ))}
-            </div>
-            <div className="relative">
-              <button onClick={() => setCampusDropdownOpen(!campusDropdownOpen)} className="flex items-center gap-2 px-4 py-2 bg-white border border-[rgba(30,41,59,0.1)] rounded-md text-sm font-medium text-[#1e293b] hover:bg-gray-50">
+          <div className="flex flex-col gap-3">
+            <div className="relative w-full sm:w-fit">
+              <button
+                onClick={() => setCampusDropdownOpen(!campusDropdownOpen)}
+                suppressHydrationWarning
+                className="flex w-full sm:w-auto items-center justify-between gap-2 px-4 py-2 bg-white border border-[rgba(30,41,59,0.1)] rounded-md text-sm font-medium text-[#1e293b] hover:bg-gray-50"
+              >
                 {activeCampusSlug != null ? campuses.find((c) => c.slug === activeCampusSlug)?.name ?? 'All Campuses' : 'All Campuses'}
-                <ChevronDown className="h-4 w-4" />
+                <ChevronDown className="h-4 w-4 shrink-0" />
               </button>
               {campusDropdownOpen && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setCampusDropdownOpen(false)} />
-                  <div className="absolute right-0 mt-1 z-50 w-56 bg-white rounded-lg shadow-lg border border-[rgba(30,41,59,0.1)] py-1">
-                    <button onClick={() => setCampus(null)} className={`w-full text-left px-4 py-2 text-sm ${activeCampusSlug === null ? 'bg-[#fbf2f3] text-[#991b1b] font-medium' : 'text-[#1e293b] hover:bg-gray-50'}`}>
+                  <div className="absolute left-0 mt-1 z-50 w-[min(22rem,calc(100vw-2rem))] max-w-[calc(100vw-2rem)] max-h-[min(60vh,420px)] overflow-y-auto overscroll-contain bg-white rounded-lg shadow-lg border border-[rgba(30,41,59,0.1)] py-1">
+                    <button
+                      onClick={() => setCampus(null)}
+                      className={`w-full text-left px-4 py-2 text-sm ${activeCampusSlug === null ? 'bg-[#fbf2f3] text-[#991b1b] font-medium' : 'text-[#1e293b] hover:bg-gray-50'}`}
+                    >
                       All Campuses
                     </button>
                     {campuses.map((c) => (
-                      <button key={c.id} onClick={() => setCampus(c.slug)} className={`w-full text-left px-4 py-2 text-sm flex justify-between ${activeCampusSlug === c.slug ? 'bg-[#fbf2f3] text-[#991b1b] font-medium' : 'text-[#1e293b] hover:bg-gray-50'}`}>
-                        {c.name}
-                        <span className="text-[#64748b]">{campusArticleCounts.get(String(c.id)) ?? 0}</span>
+                      <button
+                        key={c.id}
+                        onClick={() => setCampus(c.slug)}
+                        className={`w-full text-left px-4 py-2 text-sm flex items-start justify-between gap-3 ${activeCampusSlug === c.slug ? 'bg-[#fbf2f3] text-[#991b1b] font-medium' : 'text-[#1e293b] hover:bg-gray-50'}`}
+                      >
+                        <span className="min-w-0 break-words">{c.name}</span>
+                        <span className="text-[#64748b] shrink-0">{campusArticleCounts.get(String(c.id)) ?? 0}</span>
                       </button>
                     ))}
                   </div>
                 </>
               )}
+            </div>
+
+            <div className="-mx-1 overflow-x-auto px-1">
+              <div className="flex min-w-max sm:min-w-0 sm:flex-wrap gap-2">
+                <button onClick={() => setCategory(null)} suppressHydrationWarning className={`px-4 py-2 text-sm font-medium rounded-md transition-colors whitespace-nowrap ${!activeCategory ? 'bg-[#991b1b] text-white' : 'bg-white text-[#1e293b] hover:bg-[#fbf2f3]'}`}>
+                  All
+                </button>
+                {categories.map((c) => (
+                  <button key={c.slug} onClick={() => setCategory(c.slug)} suppressHydrationWarning className={`px-4 py-2 text-sm font-medium rounded-md transition-colors whitespace-nowrap ${activeCategory === c.slug ? 'bg-[#991b1b] text-white' : 'bg-white text-[#1e293b] hover:bg-[#fbf2f3]'}`}>
+                    {c.name}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>

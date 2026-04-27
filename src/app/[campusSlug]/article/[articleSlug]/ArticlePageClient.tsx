@@ -169,8 +169,8 @@ export default function ArticlePageClient({
                 <div className="flex items-center justify-center min-h-[200px] max-h-[70vh]">
                   <ImageWithFallback key={carouselIndex} src={articleImages[carouselIndex]} alt={`${article.title} — image ${carouselIndex + 1}`} className="max-w-full max-h-[70vh] w-auto h-auto object-contain" />
                 </div>
-                <button type="button" onClick={() => setCarouselIndex((i) => (i === 0 ? articleImages.length - 1 : i - 1))} className="absolute left-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 transition-colors"><ChevronLeft className="h-5 w-5" /></button>
-                <button type="button" onClick={() => setCarouselIndex((i) => (i === articleImages.length - 1 ? 0 : i + 1))} className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 transition-colors"><ChevronRight className="h-5 w-5" /></button>
+                <button type="button" suppressHydrationWarning onClick={() => setCarouselIndex((i) => (i === 0 ? articleImages.length - 1 : i - 1))} className="absolute left-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 transition-colors"><ChevronLeft className="h-5 w-5" /></button>
+                <button type="button" suppressHydrationWarning onClick={() => setCarouselIndex((i) => (i === articleImages.length - 1 ? 0 : i + 1))} className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 transition-colors"><ChevronRight className="h-5 w-5" /></button>
               </div>
             ) : (
               <div className="flex items-center justify-center min-h-[240px] md:min-h-[320px] max-h-[70vh]">
