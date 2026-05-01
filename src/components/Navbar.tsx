@@ -182,6 +182,12 @@ export default function Navbar({ searchQuery = '', showSearch }: NavbarProps) {
               {showFullNav && (
                 <>
                   <Link
+                    href="/leaderboard"
+                    className={`text-black hover:text-black text-sm font-medium transition-colors ${pathname === '/leaderboard' ? 'text-[#991b1b]' : ''}`}
+                  >
+                    Leaderboard
+                  </Link>
+                  <Link
                     href="/campuses"
                     className="text-black hover:text-black text-sm font-medium transition-colors"
                   >
@@ -441,6 +447,13 @@ export default function Navbar({ searchQuery = '', showSearch }: NavbarProps) {
                 )}
                 {showFullNav && (
                   <>
+                    <Link
+                      href="/leaderboard"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="text-black hover:text-black text-sm font-medium"
+                    >
+                      Leaderboard
+                    </Link>
                     <Link
                       href="/campuses"
                       onClick={() => setMobileMenuOpen(false)}

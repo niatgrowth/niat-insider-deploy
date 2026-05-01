@@ -76,15 +76,47 @@ export default function ForgotPasswordPage() {
   };
 
   const handleResetPassword = async (e: React.FormEvent) => {
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
     e.preventDefault();
     if (!otpVerified) {
       setError("Verify OTP before resetting password.");
       return;
     }
-    if (!newPassword || newPassword.length < 8) {
-      setError("New password must be at least 8 characters.");
-      return;
-    }
+
+
+
+    if (newPassword.includes(" ")) {
+    setError("Password should not contain spaces");
+    return;
+  }
+
+  if (newPassword.length < 8) {
+    setError("Password length should be at least 8 characters");
+    return;
+  }
+
+  if (!/[A-Z]/.test(newPassword)) {
+    setError("Password must contain at least 1 capital letter (A-Z)");
+    return;
+  }
+
+  if (!/[a-z]/.test(newPassword)) {
+    setError("Password must contain at least 1 small letter (a-z)");
+    return;
+  }
+
+  if (!/[0-9]/.test(newPassword)) {
+    setError("Password must contain at least 1 number (0-9)");
+    return;
+  }
+
+  // if (!/[@$!%*?&]/.test(newPassword)) {
+  //   setError("Password must contain at least 1 special character (@ $ ! % * ? &)");
+  //   return;
+  // }
+
+
+    
     if (newPassword !== confirmPassword) {
       setError("Passwords do not match.");
       return;
