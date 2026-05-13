@@ -1,42 +1,93 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
-import { 
-  Trophy, 
-  MapPin, 
-  School, 
-  ChevronRight, 
-  Crown,
+import { useState, useMemo, useEffect, useRef } from "react";
+import {
+  Trophy,
+  MapPin,
+  School,
   Loader2,
   AlertCircle,
   FileText,
-  Building2
 } from "lucide-react";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { 
-  useIndividualLeaderboard, 
-  useCampusLeaderboard, 
-  useMyCampusLeaderboard 
+import {
+  useIndividualLeaderboard,
+  useCampusLeaderboard,
+  useMyCampusLeaderboard
 } from "@/hooks/useLeaderboard";
 import { useAuthStore } from "@/store/authStore";
 import { fetchFoundingEditorProfile } from "@/lib/authApi";
 import { getAuthorProfileHref } from "@/lib/authorRoute";
-import type { 
-  LeaderboardEntry, 
-  CampusLeaderboardEntry, 
-  UserRank 
+import type {
+  LeaderboardEntry,
+  CampusLeaderboardEntry,
+  UserRank
 } from "@/types/leaderboard";
+
+// ─── Color Utilities ─────────────────────────────────────────────────────────
+const getAvatarGradient = (initial: string) => {
+  const charCode = initial.charCodeAt(0) || 0;
+  const gradients = [
+    "from-blue-500 to-indigo-600",
+    "from-emerald-400 to-teal-600",
+    "from-rose-400 to-red-600",
+    "from-violet-500 to-purple-700",
+    "from-pink-500 to-rose-600",
+    "from-cyan-400 to-blue-600",
+    "from-fuchsia-500 to-purple-600",
+  ];
+  return gradients[charCode % gradients.length];
+};
 
 type Tab = "overall" | "campuses" | "my-campus";
 
 const formatName = (slug: string) => (slug || "").replace(/-/g, " ").toUpperCase();
 
+/** Shared shape for podium + table rows (student or campus). */
+type LeaderboardRowDisplay = {
+  position: number | string;
+  href: string;
+  displayName: string;
+  initial: string;
+  article_count: number;
+  isUser?: boolean;
+  isOutsideTop10?: boolean;
+};
+
+function entryToDisplay(entry: LeaderboardEntry, username?: string): LeaderboardRowDisplay {
+  const isUser = username && entry.author_username ? entry.author_username.toLowerCase() === username.toLowerCase() : false;
+  // Fallback to author_username if author_profile_slug is missing to avoid 404s
+  const slugToUse = entry.author_profile_slug || entry.author_username || "";
+  return {
+    position: entry.position,
+    href: getAuthorProfileHref(slugToUse),
+    displayName: formatName(slugToUse),
+    initial: slugToUse.charAt(0).toUpperCase(),
+    article_count: entry.article_count,
+    isUser,
+  };
+}
+
+function campusToDisplay(campus: CampusLeaderboardEntry, userCampusName: string | null): LeaderboardRowDisplay {
+  const name = (campus.campus_name || "").trim();
+  const isUser = campus.is_user_campus || (userCampusName && name.toLowerCase() === userCampusName.toLowerCase());
+  return {
+    position: campus.position,
+    href: `/${campus.campus_slug}`,
+    displayName: name.toUpperCase(),
+    initial: (name.charAt(0) || "?").toUpperCase(),
+    article_count: campus.article_count,
+    isUser: !!isUser,
+  };
+}
+
 export default function LeaderboardPageClient() {
   const [activeTab, setActiveTab] = useState<Tab>("overall");
   const user = useAuthStore((state) => state.user);
   const isAuthenticated = !!user;
+  const username = user?.username;
 
   // Fetch campus name from profile
   const [campusName, setCampusName] = useState<string | null>(null);
@@ -52,19 +103,48 @@ export default function LeaderboardPageClient() {
   const { data: myCampusData, isLoading: myCampusLoading, error: myCampusError } = useMyCampusLeaderboard(isAuthenticated && activeTab === "my-campus");
 
   const viewTitle = useMemo(() => {
-    if (activeTab === "campuses") return "Campus Performance";
+    if (activeTab === "campuses") return "Campus Rankings";
     if (activeTab === "my-campus") return campusName ? `${campusName} Leaders` : "My Campus Leaderboard";
     return "Global Contributors";
   }, [activeTab, campusName]);
 
+  const hero = useMemo(() => {
+    if (activeTab === "campuses") {
+      return {
+        title: (
+          <>
+            Top{" "}
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600">
+              Campuses
+            </span>
+          </>
+        ),
+        subtitle:
+          "Leading NIAT campuses ranked by total published articles from student contributors.",
+      };
+    }
+    return {
+      title: (
+        <>
+          Top{" "}
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600">
+            AI Champions
+          </span>
+        </>
+      ),
+      subtitle:
+        "These highest-ranked students are those who consistently build, innovate, and perform.",
+    };
+  }, [activeTab]);
+
   return (
-    <div className="min-h-screen bg-[#f8fafc]">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-amber-50/30 to-indigo-50/20">
       <Navbar />
 
       {/* Sticky Tab Bar - directly below navbar */}
-      <div className="sticky top-0 z-30 bg-white border-b border-[#e8edf2] shadow-sm">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-end gap-1 py-2">
+      <div className="sticky top-0 z-30 border-b border-slate-200/50 bg-white/80 backdrop-blur-xl shadow-sm shadow-slate-900/5">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-end gap-2 py-3">
             <TabButton active={activeTab === "overall"} onClick={() => setActiveTab("overall")} icon={<Trophy className="h-4 w-4" />} label="Overall" />
             <TabButton active={activeTab === "campuses"} onClick={() => setActiveTab("campuses")} icon={<MapPin className="h-4 w-4" />} label="Campuses" />
             <TabButton
@@ -78,27 +158,32 @@ export default function LeaderboardPageClient() {
         </div>
       </div>
 
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-16">
 
         {/* Header */}
-        <header className="mb-10 text-center animate-fade-in">
-          <h1 className="text-4xl md:text-5xl font-display font-bold text-[#111827] mb-4">
-            Top <span className="text-[#f7b801]">3 AI Champions</span>
+        <header className="mb-14 text-center animate-fade-in">
+          <h1 className="text-5xl md:text-6xl font-black text-slate-900 mb-6 tracking-tight">
+            {hero.title}
           </h1>
-          <p className="text-[#6b7280] text-lg max-w-2xl mx-auto">
-            These highest-ranked students are those who consistently build, innovate, and perform.
-          </p>
+          <p className="text-slate-500 text-xl max-w-2xl mx-auto leading-relaxed font-medium">{hero.subtitle}</p>
         </header>
 
         <div className="space-y-16">
           {activeTab === "overall" && (
-            <IndividualView data={individualData} isLoading={individualLoading} error={individualError} title={viewTitle} />
+            <IndividualView data={individualData} isLoading={individualLoading} error={individualError} title={viewTitle} username={username} />
           )}
           {activeTab === "campuses" && (
-            <CampusesView data={campusesData} isLoading={campusesLoading} error={campusesError} userCampusName={campusName} />
+            <CampusesView
+              data={campusesData}
+              isLoading={campusesLoading}
+              error={campusesError}
+              userCampusName={campusName}
+              isAuthenticated={isAuthenticated}
+              tableTitle={viewTitle}
+            />
           )}
           {activeTab === "my-campus" && (
-            <IndividualView data={myCampusData} isLoading={myCampusLoading} error={myCampusError} title={viewTitle} requiresAuth />
+            <IndividualView data={myCampusData} isLoading={myCampusLoading} error={myCampusError} title={viewTitle} requiresAuth username={username} />
           )}
         </div>
       </main>
@@ -121,7 +206,7 @@ function TabButton({ active, onClick, icon, label, disabled = false }: {
 }) {
   if (disabled) {
     return (
-      <button disabled className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-[#c4cbd6] cursor-not-allowed">
+      <button disabled className="flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold text-slate-400 bg-slate-100/50 cursor-not-allowed">
         {icon} {label}
       </button>
     );
@@ -129,11 +214,10 @@ function TabButton({ active, onClick, icon, label, disabled = false }: {
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 ${
-        active
-          ? "bg-[#f7b801] text-white shadow-sm shadow-[#f7b801]/30"
-          : "text-[#6b7280] hover:text-[#111827] hover:bg-[#f8fafc]"
-      }`}
+      className={`flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-bold transition-all duration-300 ${active
+          ? "bg-slate-900 text-white shadow-lg shadow-slate-900/20 ring-1 ring-slate-800"
+          : "text-slate-600 hover:text-slate-900 hover:bg-white hover:shadow-md hover:shadow-slate-900/5 border border-transparent hover:border-slate-200"
+        }`}
     >
       {icon} {label}
     </button>
@@ -141,47 +225,55 @@ function TabButton({ active, onClick, icon, label, disabled = false }: {
 }
 
 // ─── Podium ───────────────────────────────────────────────────────────────────
-function Podium({ top3 }: { top3: LeaderboardEntry[] }) {
-  const first  = top3.find(u => u.position === 1);
-  const second = top3.find(u => u.position === 2);
-  const third  = top3.find(u => u.position === 3);
+function Podium({ top3 }: { top3: LeaderboardRowDisplay[] }) {
+  const first = top3.find((u) => u.position === 1);
+  const second = top3.find((u) => u.position === 2);
+  const third = top3.find((u) => u.position === 3);
+
+  if (!first && !second && !third) return null;
 
   return (
-    <div className="relative bg-white rounded-3xl p-8 md:p-10 overflow-hidden border border-[#e8edf2] shadow-sm">
-      {/* Subtle gold glow */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[320px] h-[320px] bg-[#f7b801]/5 rounded-full blur-[80px] pointer-events-none" />
+    <div className="relative overflow-hidden rounded-3xl border border-slate-200/60 bg-white p-8 shadow-2xl shadow-slate-900/[0.04] ring-1 ring-slate-900/5 md:p-12 mb-8">
+      {/* Warm + cool ambient glow */}
+      <div className="pointer-events-none absolute top-1/2 left-1/2 h-[500px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-tr from-amber-200/20 via-orange-100/10 to-indigo-200/15 blur-[100px]" />
 
-      <div className="relative flex flex-col md:flex-row items-center md:items-end justify-center gap-3 md:gap-0 mt-6">
+      <div className="relative flex flex-col items-center justify-center gap-4 md:flex-row md:items-end md:gap-0 mt-4">
         {/* Rank 2 */}
         {second && (
-          <div className="order-2 md:order-1 w-full max-w-[180px] flex flex-col items-center">
-            <PodiumAvatar entry={second} />
-            <div className="w-full h-28 md:h-36 bg-gradient-to-b from-[#f1f5f9] to-[#e2e8f0] rounded-t-2xl flex items-center justify-center border-t border-x border-[#e2e8f0]">
-              <span className="text-5xl font-black text-[#111827]/8 select-none">2</span>
+          <div className="order-2 flex w-full max-w-[220px] flex-col items-center md:order-1 z-10">
+            <PodiumAvatar row={second} />
+            <div className="flex h-32 w-full items-center justify-center rounded-t-3xl border-x border-t border-slate-200 bg-gradient-to-b from-slate-100 to-slate-50 md:h-40 shadow-[inset_0_4px_10px_rgba(0,0,0,0.02)]">
+              <span className="select-none bg-gradient-to-b from-slate-400 to-slate-600 bg-clip-text text-6xl font-black text-transparent drop-shadow-sm md:text-7xl">
+                2
+              </span>
             </div>
           </div>
         )}
 
         {/* Rank 1 */}
         {first && (
-          <div className="order-1 md:order-2 w-full max-w-[200px] flex flex-col items-center z-10 md:-mx-1">
-            <div className="mb-2">
-              <Trophy className="h-7 w-7 text-[#f7b801] drop-shadow-[0_0_12px_rgba(247,184,1,0.3)]" />
+          <div className="order-1 z-20 flex w-full max-w-[240px] flex-col items-center md:order-2 md:-mx-4">
+            <div className="mb-3">
+              <Trophy className="h-9 w-9 text-amber-500 drop-shadow-[0_0_15px_rgba(245,158,11,0.5)]" />
             </div>
-            <PodiumAvatar entry={first} isFirst />
-            <div className="w-full h-40 md:h-48 bg-gradient-to-b from-[#fef9e7] to-[#fef3c7] rounded-t-2xl flex items-center justify-center relative border-t border-x border-[#fde68a]">
-              <span className="text-7xl font-black text-[#f7b801]/15 select-none">1</span>
-              <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#f7b801]/40 to-transparent" />
+            <PodiumAvatar row={first} isFirst />
+            <div className="relative flex h-48 w-full items-center justify-center rounded-t-3xl border-x border-t border-amber-300/80 bg-gradient-to-b from-amber-100 via-amber-50/50 to-amber-50 md:h-56 shadow-[inset_0_4px_20px_rgba(245,158,11,0.1)]">
+              <span className="select-none text-8xl font-black text-transparent bg-clip-text bg-gradient-to-b from-amber-600 via-amber-700 to-orange-800 drop-shadow-[0_2px_10px_rgba(245,158,11,0.2)]">
+                1
+              </span>
+              <div className="absolute top-0 right-0 left-0 h-1 bg-gradient-to-r from-transparent via-amber-400 to-transparent opacity-50" />
             </div>
           </div>
         )}
 
         {/* Rank 3 */}
         {third && (
-          <div className="order-3 w-full max-w-[180px] flex flex-col items-center">
-            <PodiumAvatar entry={third} />
-            <div className="w-full h-20 md:h-28 bg-gradient-to-b from-[#f8fafc] to-[#f1f5f9] rounded-t-2xl flex items-center justify-center border-t border-x border-[#e8edf2]">
-              <span className="text-4xl font-black text-[#111827]/5 select-none">3</span>
+          <div className="order-3 flex w-full max-w-[220px] flex-col items-center z-10">
+            <PodiumAvatar row={third} />
+            <div className="flex h-24 w-full items-center justify-center rounded-t-3xl border-x border-t border-orange-200/80 bg-gradient-to-b from-orange-50 to-orange-50/30 md:h-32 shadow-[inset_0_4px_10px_rgba(0,0,0,0.02)]">
+              <span className="select-none bg-gradient-to-b from-orange-500 to-amber-700 bg-clip-text text-5xl font-black text-transparent drop-shadow-sm md:text-6xl">
+                3
+              </span>
             </div>
           </div>
         )}
@@ -191,84 +283,120 @@ function Podium({ top3 }: { top3: LeaderboardEntry[] }) {
 }
 
 // ─── Podium Avatar ────────────────────────────────────────────────────────────
-function PodiumAvatar({ entry, isFirst = false }: { entry: LeaderboardEntry; isFirst?: boolean }) {
+function PodiumAvatar({ row, isFirst = false }: { row: LeaderboardRowDisplay; isFirst?: boolean }) {
+  const isClickable = !row.href.startsWith("/author/");
+
+  const content = (
+    <>
+      <div className={`relative mb-3 ${isFirst ? "h-20 w-20" : "h-16 w-16"}`}>
+        {isFirst && (
+          <div className="absolute inset-0 animate-pulse rounded-full bg-gradient-to-br from-amber-400/40 to-orange-500/30 blur-md" />
+        )}
+        <div
+          className={`flex h-full w-full items-center justify-center rounded-full border-4 shadow-xl transition-transform duration-300 group-hover:scale-110 ${isFirst
+              ? "border-amber-300 bg-gradient-to-br from-amber-50 to-orange-100 shadow-amber-500/20"
+              : "border-white bg-gradient-to-br from-slate-50 to-slate-100 shadow-slate-900/10"
+            }`}
+        >
+          <span
+            className={`font-black ${isFirst ? "bg-gradient-to-br from-amber-600 to-orange-700 bg-clip-text text-3xl text-transparent" : "text-xl text-slate-600"}`}
+          >
+            {row.initial}
+          </span>
+        </div>
+      </div>
+
+      <p className={`mb-2 max-w-[140px] truncate text-center text-sm font-black text-slate-800 transition-colors group-hover:text-indigo-950`}>{row.displayName}</p>
+
+      <div className={`flex items-center gap-1.5 rounded-full px-3 py-1 shadow-sm transition-all duration-300 ${
+        isFirst ? "bg-gradient-to-r from-amber-100 to-orange-100 border border-amber-200/80 text-amber-900 shadow-amber-500/20" : `bg-white border border-slate-200 text-slate-700 group-hover:border-indigo-200 group-hover:shadow-indigo-900/5`
+      }`}>
+        <FileText size={10} className={isFirst ? "text-amber-600" : `text-slate-400 group-hover:text-indigo-500 transition-colors`} />
+        <span className="text-sm font-black">{row.article_count}</span>
+        <span className="text-[10px] font-bold uppercase tracking-widest opacity-80">Articles</span>
+      </div>
+    </>
+  );
+
   return (
-    <div className="flex flex-col items-center mb-3 animate-fade-in group">
-      <Link href={getAuthorProfileHref(entry.author_profile_slug)} className="flex flex-col items-center">
-        <div className={`relative mb-2 ${isFirst ? "w-16 h-16" : "w-13 h-13"}`}>
-          {isFirst && (
-            <div className="absolute inset-0 rounded-full bg-[#f7b801]/20 blur-md animate-pulse" />
-          )}
-          <div className={`w-full h-full rounded-full border-2 ${isFirst ? "border-[#f7b801] bg-[#fffbeb]" : "border-[#e8edf2] bg-[#f8fafc]"} flex items-center justify-center shadow-md transition-transform group-hover:scale-105`}>
-            <span className={`font-black ${isFirst ? "text-[#d97706] text-xl" : "text-[#6b7280] text-lg"}`}>
-              {entry.author_profile_slug.charAt(0).toUpperCase()}
-            </span>
-          </div>
+    <div className={`relative flex flex-col items-center ${isFirst ? "mt-0 z-10" : "mt-8 opacity-90"}`}>
+      {row.isUser && (
+        <span className="absolute -top-3 right-0 bg-gradient-to-r from-amber-500 to-orange-500 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-white shadow-sm shadow-amber-500/30 rounded-md z-20">
+          YOU
+        </span>
+      )}
+      {isClickable ? (
+        <Link href={row.href} className="flex flex-col items-center group">
+          {content}
+        </Link>
+      ) : (
+        <div className="flex flex-col items-center group cursor-default">
+          {content}
         </div>
-
-        <p className="text-xs font-bold text-[#111827] mb-1.5 truncate max-w-[110px] text-center">
-          {formatName(entry.author_profile_slug)}
-        </p>
-
-        <div className="bg-[#fffbeb] border border-[#fde68a] px-2.5 py-0.5 rounded-full flex items-center gap-1">
-          <FileText size={9} className="text-[#f7b801]" />
-          <span className="text-xs font-black text-[#d97706]">{entry.article_count}</span>
-          <span className="text-[9px] font-bold text-[#9ca3af] uppercase tracking-tight">Articles</span>
-        </div>
-      </Link>
+      )}
     </div>
   );
 }
 
 // ─── Individual View ──────────────────────────────────────────────────────────
-function IndividualView({ data, isLoading, error, title, requiresAuth = false }: {
-  data?: any; isLoading: boolean; error: any; title: string; requiresAuth?: boolean;
+function IndividualView({ data, isLoading, error, title, requiresAuth = false, username }: {
+  data?: { top10: LeaderboardEntry[]; your_rank: UserRank | null };
+  isLoading: boolean;
+  error: unknown;
+  title: string;
+  requiresAuth?: boolean;
+  username?: string;
 }) {
   if (isLoading) return <LoadingState />;
   if (error) return <ErrorState message="Failed to load rankings" />;
   if (!data && requiresAuth) return <EmptyState message="Please login to see your campus data" />;
   if (!data?.top10 || data.top10.length === 0) return <EmptyState message="No data available yet" />;
 
-  const top3 = data.top10.slice(0, 3);
-  const remaining = data.top10.slice(3);
+  const top3 = data.top10.slice(0, 3).map((e: LeaderboardEntry) => entryToDisplay(e, username));
+  const remainingData = data.top10.slice(3).map((e: LeaderboardEntry) => entryToDisplay(e, username));
+
+  let appendedRow: LeaderboardRowDisplay | null = null;
+  if (data.your_rank && !data.your_rank.in_top10 && username) {
+    appendedRow = {
+      position: data.your_rank.position,
+      href: getAuthorProfileHref(username),
+      displayName: formatName(username),
+      initial: username.charAt(0).toUpperCase(),
+      article_count: data.your_rank.article_count,
+      isUser: true,
+      isOutsideTop10: true,
+    };
+  }
+
+  const remaining = [...remainingData];
+  if (appendedRow) {
+    remaining.push(appendedRow);
+  }
 
   return (
-    <div className="animate-fade-in">
-      {/* Podium - full width */}
-      <Podium top3={top3} />
+    <div className="animate-fade-in flex flex-col items-center w-full">
+      <div className="w-full">
+        <Podium top3={top3} />
+      </div>
 
-      {/* Rank List + Your Position side by side */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-8 mt-8">
-        {/* Rank List */}
-        <div className="space-y-4">
-          <h3 className="text-xl font-bold text-[#111827]">{title}</h3>
-          <div className="bg-white rounded-2xl border border-[#e8edf2] shadow-sm overflow-hidden">
-            {/* Header — mirrors the exact data-row grid layout */}
-            <div className="grid grid-cols-[56px_1fr_90px] gap-4 px-6 py-3 bg-[#f8fafc] border-b border-[#e8edf2]">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-[#9ca3af] text-center">Rank</span>
-              {/* offset by avatar width (36px) + gap (12px) to sit above the name */}
-              <span className="text-[10px] font-bold uppercase tracking-widest text-[#9ca3af] pl-12">Contributor</span>
-              <span className="text-[10px] font-bold uppercase tracking-widest text-[#9ca3af] text-right pr-2">Score</span>
-            </div>
-            <div className="divide-y divide-[#f1f5f9]">
-              {remaining.map((entry: LeaderboardEntry) => (
-                <RankRow key={entry.author_profile_slug} entry={entry} />
-              ))}
-            </div>
-          </div>
+      <div className="w-full mt-6">
+        <div className="flex items-center justify-between mb-6 px-2">
+          <h3 className="text-2xl font-black text-slate-900 tracking-tight">{title}</h3>
+          <span className="text-sm font-bold text-slate-500 uppercase tracking-widest">{data.top10.length} Contributors</span>
         </div>
-
-        {/* Your Position - sticky sidebar alongside rank list */}
-        <div className="self-start lg:sticky lg:top-16">
-          <h3 className="text-xl font-bold text-[#111827] mb-4">Your Position</h3>
-          {data.your_rank ? (
-            <UserRankCard rank={data.your_rank} />
-          ) : (
-            <div className="bg-white p-6 rounded-2xl border border-[#e8edf2] text-center shadow-sm">
-              <Crown size={32} className="text-[#f7b801]/40 mx-auto mb-3" />
-              <p className="text-sm text-[#9ca3af]">Login to track your own ranking</p>
-            </div>
-          )}
+        
+        <div className="overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-[0_8px_30px_rgb(0,0,0,0.06)] ring-1 ring-slate-900/5">
+          {/* Header */}
+          <div className="grid grid-cols-[80px_1fr_120px] gap-4 border-b border-slate-200/80 bg-slate-50 px-4 sm:px-8 py-5">
+            <span className="text-center text-[11px] font-black uppercase tracking-widest text-slate-400">Rank</span>
+            <span className="pl-2 sm:pl-4 text-[11px] font-black uppercase tracking-widest text-slate-400">Contributor</span>
+            <span className="pr-2 text-right text-[11px] font-black uppercase tracking-widest text-slate-400">Score</span>
+          </div>
+          <div className="flex flex-col bg-white">
+            {remaining.map((row) => (
+              <RankRow key={`${row.href}-${row.position}`} row={row} />
+            ))}
+          </div>
         </div>
       </div>
     </div>
@@ -276,156 +404,186 @@ function IndividualView({ data, isLoading, error, title, requiresAuth = false }:
 }
 
 // ─── Rank Row ─────────────────────────────────────────────────────────────────
-function RankRow({ entry }: { entry: LeaderboardEntry }) {
-  return (
-    <Link
-      href={getAuthorProfileHref(entry.author_profile_slug)}
-      className="grid grid-cols-[56px_1fr_90px] gap-4 px-6 py-4 items-center hover:bg-[#fffbeb] transition-colors group cursor-default"
-    >
-      <div className="flex justify-center">
-        <span className="text-sm font-bold text-[#d1d5db]">#{entry.position}</span>
+function RankRow({ row }: { row: LeaderboardRowDisplay }) {
+  const rowRef = useRef<any>(null);
+  const isClickable = !row.href.startsWith("/author/");
+
+  useEffect(() => {
+    // Only auto-scroll if the user's row is outside the top 10 (appended at the bottom)
+    if (row.isUser && row.isOutsideTop10) {
+      const timer = setTimeout(() => {
+        if (rowRef.current) {
+          rowRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }, 600);
+      return () => clearTimeout(timer);
+    }
+  }, [row.isUser, row.isOutsideTop10]);
+
+  const className = `group grid grid-cols-[80px_1fr_120px] items-center gap-4 px-4 sm:px-8 py-5 transition-all duration-300 ${
+    row.isUser
+      ? `bg-gradient-to-r from-amber-100 via-orange-50/50 to-amber-100 hover:from-amber-200 hover:via-orange-100/50 hover:to-amber-200 shadow-[inset_0_0_30px_rgba(245,158,11,0.15)] ring-1 ring-amber-400/60 relative z-10`
+      : `bg-gradient-to-r from-slate-50/40 via-white/40 to-slate-50/40 hover:from-indigo-50/60 hover:via-white hover:to-amber-50/60 hover:shadow-lg hover:shadow-indigo-900/5 border border-transparent hover:border-indigo-200/50 backdrop-blur-sm`
+  } ${row.isOutsideTop10 ? "border-t-[3px] border-dashed border-amber-300" : "border-b border-slate-200/60 last:border-0"}`;
+
+  const content = (
+    <>
+      <div className="flex justify-center items-center relative">
+        <span className={`text-xl font-black ${row.isUser ? "text-amber-600 drop-shadow-sm" : `text-slate-400 group-hover:text-indigo-500 transition-colors`}`}>
+          #{row.position}
+        </span>
       </div>
-      <div className="flex items-center gap-3">
-        <div className="w-9 h-9 rounded-full bg-[#fffbeb] border border-[#fde68a] flex items-center justify-center text-sm font-bold text-[#f7b801]">
-          {entry.author_profile_slug.charAt(0).toUpperCase()}
+      <div className="flex items-center gap-4 sm:gap-6">
+        <div className={`flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-full border shadow-sm transition-transform duration-300 group-hover:scale-110 shrink-0 ${
+          row.isUser
+            ? "border-amber-400 bg-gradient-to-br from-amber-400 to-orange-500 text-white ring-4 ring-amber-200 ring-offset-2 shadow-amber-500/40"
+            : `border-transparent bg-gradient-to-br ${getAvatarGradient(row.initial)} text-white shadow-md group-hover:ring-2 group-hover:ring-indigo-300 group-hover:ring-offset-2 opacity-90 group-hover:opacity-100`
+        }`}>
+          <span className="text-xl font-black drop-shadow-md">{row.initial}</span>
         </div>
-        <p className="text-sm font-semibold text-[#374151] group-hover:text-[#d97706] transition-colors">
-          {formatName(entry.author_profile_slug)}
-        </p>
-      </div>
-      <div className="flex items-center justify-end gap-1.5 pr-2">
-        <FileText size={12} className="text-[#d1d5db]" />
-        <span className="text-sm font-black text-[#374151]">{entry.article_count}</span>
-      </div>
-    </Link>
-  );
-}
-
-// ─── User Rank Card ───────────────────────────────────────────────────────────
-function UserRankCard({ rank }: { rank: UserRank }) {
-  return (
-    <div className="bg-white rounded-2xl p-6 border border-[#fde68a] shadow-sm relative overflow-hidden">
-      <div className="absolute -right-8 -top-8 w-32 h-32 bg-[#f7b801]/10 rounded-full blur-2xl pointer-events-none" />
-      <div className="absolute right-4 top-4 opacity-5">
-        <Crown size={80} className="text-[#f7b801]" />
-      </div>
-
-      <p className="text-[#9ca3af] text-xs font-bold uppercase tracking-widest mb-2">Your Ranking</p>
-      <div className="flex items-baseline gap-2 mb-6">
-        <span className="text-5xl font-black text-[#f7b801]">#{rank.position}</span>
-        {rank.in_top10 && (
-          <span className="bg-[#fef3c7] text-[#d97706] px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border border-[#fde68a]">
-            Top 10
-          </span>
-        )}
-      </div>
-
-      <div className="space-y-3">
-        <div className="flex justify-between items-center text-sm bg-[#f8fafc] p-3 rounded-xl border border-[#e8edf2]">
-          <div className="flex items-center gap-2 text-[#6b7280]">
-            <FileText size={14} />
-            <span>Total Articles</span>
+        <div className="flex flex-col justify-center min-w-0">
+          <div className="flex items-center gap-3 flex-wrap">
+            <p className={`text-lg font-bold truncate transition-colors ${
+              row.isUser ? "text-amber-900" : `text-slate-700 group-hover:text-indigo-950`
+            }`}>
+              {row.displayName}
+            </p>
+            {row.isUser && (
+              <span className="inline-flex items-center rounded-md bg-gradient-to-r from-amber-500 to-orange-600 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-widest text-white shadow-sm shadow-amber-500/40">
+                YOU
+              </span>
+            )}
           </div>
-          <span className="font-bold text-[#111827]">{rank.article_count}</span>
+          {row.isOutsideTop10 && (
+            <span className="text-xs font-bold text-amber-600/80 uppercase tracking-widest mt-1">
+              Your Current Position
+            </span>
+          )}
         </div>
-        <p className="text-xs text-[#9ca3af] italic text-center">
-          {rank.in_top10 ? "Awesome work! Keep leading." : "Keep writing to reach the Top 10!"}
-        </p>
       </div>
+      <div className="flex items-center justify-end gap-2 pr-2">
+        <FileText size={18} className={row.isUser ? "text-amber-600" : `text-slate-400 group-hover:text-indigo-400 transition-colors`} />
+        <span className={`text-2xl font-black ${row.isUser ? "text-amber-900 drop-shadow-sm" : `text-slate-700 group-hover:text-indigo-900 transition-colors`}`}>
+          {row.article_count}
+        </span>
+      </div>
+    </>
+  );
+
+  if (isClickable) {
+    return (
+      <Link ref={rowRef} href={row.href} className={className}>
+        {content}
+      </Link>
+    );
+  }
+
+  return (
+    <div ref={rowRef} className={`${className} cursor-default`}>
+      {content}
     </div>
   );
 }
 
 // ─── Campuses View ────────────────────────────────────────────────────────────
-function CampusesView({ data, isLoading, error, userCampusName }: {
-  data?: any; isLoading: boolean; error: any; userCampusName: string | null;
+function CampusesView({
+  data,
+  isLoading,
+  error,
+  userCampusName,
+  isAuthenticated,
+  tableTitle,
+}: {
+  data?: { campuses: CampusLeaderboardEntry[] };
+  isLoading: boolean;
+  error: unknown;
+  userCampusName: string | null;
+  isAuthenticated: boolean;
+  tableTitle: string;
 }) {
   if (isLoading) return <LoadingState />;
   if (error) return <ErrorState message="Failed to load campus data" />;
   if (!data?.campuses || data.campuses.length === 0) return <EmptyState message="No campus data available" />;
 
+  const sorted = [...data.campuses].sort((a, b) => a.position - b.position);
+  // limit the main table to top 10
+  const top10Campuses = sorted.slice(0, 10);
+  const top3 = top10Campuses.slice(0, 3).map((c) => campusToDisplay(c, userCampusName));
+  const remainingData = top10Campuses.slice(3).map((c) => campusToDisplay(c, userCampusName));
+
+  const userCampus =
+    sorted.find((c) => c.is_user_campus) ??
+    (userCampusName
+      ? sorted.find((c) => c.campus_name.toLowerCase() === userCampusName.toLowerCase())
+      : undefined);
+
+  let appendedRow: LeaderboardRowDisplay | null = null;
+  if (userCampus && userCampus.position > 10) {
+    appendedRow = {
+      ...campusToDisplay(userCampus, userCampusName),
+      isUser: true,
+      isOutsideTop10: true,
+    };
+  }
+
+  const remaining = [...remainingData];
+  if (appendedRow) {
+    remaining.push(appendedRow);
+  }
+
   return (
-    <div className="space-y-6 animate-fade-in">
-      <h3 className="text-xl font-bold text-[#111827]">Campus Performance</h3>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {data.campuses.map((campus: CampusLeaderboardEntry) => (
-          <CampusRankCard key={campus.campus_slug} campus={campus} userCampusName={userCampusName} />
-        ))}
+    <div className="animate-fade-in flex flex-col items-center w-full">
+      <div className="w-full">
+        <Podium top3={top3} />
+      </div>
+
+      <div className="w-full mt-6">
+        <div className="flex items-center justify-between mb-6 px-2">
+          <h3 className="text-2xl font-black text-slate-900 tracking-tight">{tableTitle}</h3>
+          <span className="text-sm font-bold text-slate-500 uppercase tracking-widest">{top10Campuses.length} Campuses</span>
+        </div>
+        
+        <div className="overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-[0_8px_30px_rgb(0,0,0,0.06)] ring-1 ring-slate-900/5">
+          <div className="grid grid-cols-[80px_1fr_120px] gap-4 border-b border-slate-200/80 bg-slate-50 px-4 sm:px-8 py-5">
+            <span className="text-center text-[11px] font-black uppercase tracking-widest text-slate-400">Rank</span>
+            <span className="pl-2 sm:pl-4 text-[11px] font-black uppercase tracking-widest text-slate-400">Campus</span>
+            <span className="pr-2 text-right text-[11px] font-black uppercase tracking-widest text-slate-400">Score</span>
+          </div>
+          <div className="flex flex-col bg-white">
+            {remaining.map((row) => (
+              <RankRow key={`${row.href}-${row.position}`} row={row} />
+            ))}
+          </div>
+        </div>
       </div>
     </div>
-  );
-}
-
-// ─── Campus Card ──────────────────────────────────────────────────────────────
-function CampusRankCard({ campus, userCampusName }: { campus: CampusLeaderboardEntry; userCampusName: string | null }) {
-  const isUserCampus = campus.is_user_campus ||
-    (userCampusName != null && campus.campus_name.toLowerCase() === userCampusName.toLowerCase());
-
-  return (
-    <Link
-      href={`/${campus.campus_slug}`}
-      className={`group relative bg-white p-5 rounded-2xl border transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 ${
-        isUserCampus
-          ? "border-[#fde68a] shadow-sm shadow-[#f7b801]/10"
-          : "border-[#e8edf2] hover:border-[#fde68a]"
-      }`}
-    >
-      {isUserCampus && (
-        <span className="absolute -top-3 left-5 bg-[#f7b801] text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest shadow-sm">
-          My Campus
-        </span>
-      )}
-
-      <div className="flex justify-between items-start mb-4">
-        <div className={`p-2.5 rounded-xl border transition-all ${isUserCampus ? "bg-[#fffbeb] border-[#fde68a] text-[#f7b801]" : "bg-[#f8fafc] border-[#e8edf2] text-[#9ca3af] group-hover:bg-[#fffbeb] group-hover:border-[#fde68a] group-hover:text-[#f7b801]"}`}>
-          <Building2 size={20} />
-        </div>
-        <span className={`text-2xl font-black transition-colors ${isUserCampus ? "text-[#f7b801]/30" : "text-[#111827]/8 group-hover:text-[#f7b801]/20"}`}>
-          #{campus.position}
-        </span>
-      </div>
-
-      <h4 className="text-base font-bold text-[#111827] mb-1 group-hover:text-[#d97706] transition-colors">
-        {campus.campus_name}
-      </h4>
-
-      <div className="mt-4 pt-4 border-t border-[#f1f5f9] flex justify-between items-center">
-        <div>
-          <p className="text-[10px] text-[#9ca3af] uppercase font-bold tracking-wider">Total Articles</p>
-          <p className="text-xl font-black text-[#f7b801]">{campus.article_count}</p>
-        </div>
-        <div className={`h-8 w-8 rounded-full flex items-center justify-center transition-all border ${isUserCampus ? "bg-[#f7b801] text-white border-[#f7b801]" : "bg-[#f8fafc] border-[#e8edf2] text-[#9ca3af] group-hover:bg-[#f7b801] group-hover:text-white group-hover:border-[#f7b801]"}`}>
-          <ChevronRight size={16} />
-        </div>
-      </div>
-    </Link>
   );
 }
 
 // ─── States ───────────────────────────────────────────────────────────────────
 function LoadingState() {
   return (
-    <div className="flex flex-col items-center justify-center py-24 bg-white rounded-3xl border border-[#e8edf2] shadow-sm">
-      <Loader2 className="h-10 w-10 text-[#f7b801] animate-spin mb-4" />
-      <p className="text-[#9ca3af] font-medium">Crunching the data...</p>
+    <div className="flex flex-col items-center justify-center rounded-3xl border border-slate-200/60 bg-white py-32 shadow-xl shadow-slate-900/5 backdrop-blur-sm w-full">
+      <Loader2 className="mb-4 h-12 w-12 animate-spin text-amber-500" />
+      <p className="font-bold text-slate-600 text-lg">Crunching the rankings...</p>
     </div>
   );
 }
 
 function ErrorState({ message }: { message: string }) {
   return (
-    <div className="flex flex-col items-center justify-center py-16 bg-white rounded-3xl border border-red-100 shadow-sm">
-      <AlertCircle className="h-10 w-10 text-red-400 mb-4" />
-      <p className="text-[#111827] font-bold mb-1">Something went wrong</p>
-      <p className="text-[#6b7280] text-sm">{message}</p>
+    <div className="flex flex-col items-center justify-center rounded-3xl border border-red-200 bg-red-50/50 py-24 shadow-lg shadow-red-900/5 w-full">
+      <AlertCircle className="mb-4 h-12 w-12 text-red-500" />
+      <p className="mb-2 font-black text-slate-900 text-xl">Something went wrong</p>
+      <p className="text-base text-slate-600 font-medium">{message}</p>
     </div>
   );
 }
 
 function EmptyState({ message }: { message: string }) {
   return (
-    <div className="flex flex-col items-center justify-center py-24 bg-white rounded-3xl border border-dashed border-[#e8edf2]">
-      <p className="text-[#9ca3af] font-medium">{message}</p>
+    <div className="flex flex-col items-center justify-center rounded-3xl border-2 border-dashed border-slate-300 bg-slate-50/50 py-32 backdrop-blur-sm w-full">
+      <p className="font-bold text-slate-500 text-lg">{message}</p>
     </div>
   );
 }
