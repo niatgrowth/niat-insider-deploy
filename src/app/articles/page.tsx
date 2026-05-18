@@ -8,10 +8,15 @@ import ArticlesPageClient from './ArticlesPageClient';
 function pickArticles(data: PaginatedResponse<ApiArticle> | ApiArticle[] | null): {
   articles: ApiArticle[];
   next: string | null;
+  count: number;
 } {
-  if (!data) return { articles: [], next: null };
-  if (Array.isArray(data)) return { articles: data, next: null };
-  return { articles: data.results ?? [], next: data.next ?? null };
+  if (!data) return { articles: [], next: null, count: 0 };
+  if (Array.isArray(data)) return { articles: data, next: null, count: data.length };
+  return {
+    articles: data.results ?? [],
+    next: data.next ?? null,
+    count: data.count ?? (data.results ?? []).length,
+  };
 }
 
 export default async function ArticlesPage() {
@@ -40,13 +45,14 @@ export default async function ArticlesPage() {
     ? (await campusesRes.json()) as CampusListItem[] | { results?: CampusListItem[] } | null
     : [];
   const campuses = Array.isArray(campusesJson) ? campusesJson : (campusesJson?.results ?? []);
-  const { articles, next } = pickArticles(articlesJson);
+  const { articles, next, count } = pickArticles(articlesJson);
 
   return (
     <Suspense fallback={null}>
       <ArticlesPageClient
         initialArticles={articles}
         initialNext={next}
+        initialCount={count}
         categories={categories}
         campuses={campuses}
       />

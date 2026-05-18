@@ -166,7 +166,7 @@ export default function ArticlesClient() {
   };
   const getCampusSlug = (id: string | number) => apiCampuses.find((c) => String(c.id) === String(id))?.slug ?? String(id);
 
-  const totalCount = displayArticles.length;
+  const totalCount = allPublishedArticles.length;
   const campusCount = apiCampuses.length;
 
   return (

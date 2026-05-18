@@ -97,6 +97,7 @@ function apiArticleToPageArticle(a: ApiArticle): ArticlePageArticle {
 type Props = {
   initialArticles: ApiArticle[];
   initialNext: string | null;
+  initialCount?: number;
   categories: ApiCategory[];
   campuses: CampusListItem[];
 };
@@ -113,7 +114,7 @@ function toSameOriginArticlesUrl(raw: string | null): string | null {
   }
 }
 
-export default function ArticlesPageClient({ initialArticles, initialNext, categories, campuses }: Props) {
+export default function ArticlesPageClient({ initialArticles, initialNext, initialCount, categories, campuses }: Props) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -122,6 +123,7 @@ export default function ArticlesPageClient({ initialArticles, initialNext, categ
   const [campusDropdownOpen, setCampusDropdownOpen] = useState(false);
   const [allArticles, setAllArticles] = useState<ApiArticle[]>(initialArticles);
   const [next, setNext] = useState<string | null>(toSameOriginArticlesUrl(initialNext));
+  const [totalCount, setTotalCount] = useState<number>(initialCount ?? initialArticles.length);
   const [loadingMore, setLoadingMore] = useState(false);
   const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
   const loadMoreTriggerRef = useRef<HTMLDivElement | null>(null);
@@ -189,7 +191,6 @@ export default function ArticlesPageClient({ initialArticles, initialNext, categ
   };
 
   const getCampusSlug = (id: string | number) => campuses.find((c) => String(c.id) === String(id))?.slug ?? String(id);
-  const totalCount = displayArticles.length;
   const campusCount = campuses.length;
 
   const loadMore = useCallback(async () => {
@@ -207,9 +208,12 @@ export default function ArticlesPageClient({ initialArticles, initialNext, categ
         setLoadMoreError('Failed to load more articles. Retrying may help.');
         return;
       }
-      const data = (await res.json()) as { results?: ApiArticle[]; next?: string | null } | ApiArticle[];
+      const data = (await res.json()) as { results?: ApiArticle[]; next?: string | null; count?: number } | ApiArticle[];
       const newArticles = Array.isArray(data) ? data : (data.results ?? []);
       const nextCursor = Array.isArray(data) ? null : toSameOriginArticlesUrl(data.next ?? null);
+      if (!Array.isArray(data) && typeof data.count === 'number') {
+        setTotalCount(data.count);
+      }
       setAllArticles((prev) => {
         const seen = new Set(prev.map((a) => String(a.id)));
         const dedupedIncoming = newArticles.filter((a) => !seen.has(String(a.id)));
