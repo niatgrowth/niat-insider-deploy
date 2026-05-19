@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import Link from 'next/link';
 import {
   Star, MapPin, Users, FileText, Clock, ChevronRight,
-  Calendar, MessageSquare, Utensils, Home, Play, ExternalLink, Info
+  Calendar, MessageSquare, Utensils, Home, Play, ExternalLink, Info, Briefcase
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -16,7 +16,16 @@ import { useClubs } from '@/hooks/useClubs';
 import type { Campus, ArticlePageArticle } from '@/types';
 import type { ApiArticle } from '@/types/articleApi';
 import type { CampusListItem } from '@/types/campusApi';
-import { backendCategoryToFrontend } from '@/data/articleCategories';
+import { backendCategoryToFrontend, getCategoryConfig } from '@/data/articleCategories';
+
+const categoryMeta: Record<string, { label: string; icon: any }> = {
+  'survival-food': { label: 'Food', icon: Utensils },
+  'amenities': { label: 'Living', icon: Home },
+  'local-travel': { label: 'Travel', icon: MapPin },
+  'career-wins': { label: 'Careers', icon: Briefcase },
+  'club-directory': { label: 'Clubs Info', icon: Users },
+};
+
 
 function apiArticleToPageArticle(a: ApiArticle): ArticlePageArticle {
   return {
@@ -54,14 +63,17 @@ export default function CampusPageClient({ campus, campusSlug, articleCount, api
     week1: useRef<HTMLDivElement>(null),
     campusLife: useRef<HTMLDivElement>(null),
     clubs: useRef<HTMLDivElement>(null),
-    food: useRef<HTMLDivElement>(null),
-    living: useRef<HTMLDivElement>(null),
+    'survival-food': useRef<HTMLDivElement>(null),
+    'amenities': useRef<HTMLDivElement>(null),
+    'local-travel': useRef<HTMLDivElement>(null),
+    'career-wins': useRef<HTMLDivElement>(null),
+    'club-directory': useRef<HTMLDivElement>(null),
     reviews: useRef<HTMLDivElement>(null),
     about: useRef<HTMLDivElement>(null),
   };
 
   const { articles: recentPublishedArticles } = usePublishedArticles(
-    campusId ? { campus: campusId } : undefined,
+    campusId ? { campus: campusId, page_size: 100 } : undefined,
     { enabled: !!campusId }
   );
   const { clubs: campusClubs } = useClubs(campusId ? { campus: campusId } : undefined);
@@ -82,43 +94,54 @@ export default function CampusPageClient({ campus, campusSlug, articleCount, api
     const idStr = String(id);
     return idStr === campusId ? slugForLinks : (apiCampuses.find((c) => String(c.id) === idStr)?.slug ?? idStr);
   };
-  const foodArticles = useMemo(
-    () =>
-      campusRecentPublishedArticles
-        .filter((a) => a.category === 'survival-food')
-        .map(apiArticleToPageArticle)
-        .slice(0, 6),
-    [campusRecentPublishedArticles]
-  );
-  const livingArticles = useMemo(
-    () =>
-      campusRecentPublishedArticles
-        .filter((a) => a.category === 'amenities')
-        .map(apiArticleToPageArticle)
-        .slice(0, 6),
-    [campusRecentPublishedArticles]
-  );
   const thirtyDaysArticles = useMemo(
     () =>
       campusRecentPublishedArticles
-        .filter((a) => a.category === 'onboarding-kit')
+        .filter((a) => {
+          const cat = a.category as string;
+          return cat === 'onboarding-kit' || cat === '30-days-at-niat' || cat === '30-days';
+        })
         .map(apiArticleToPageArticle)
         .slice(0, 6),
     [campusRecentPublishedArticles]
   );
+  const otherCategories = useMemo(() => {
+    const cats = new Set<string>();
+    campusRecentPublishedArticles.forEach((a) => {
+      const cat = a.category as string;
+      if (
+        cat &&
+        cat !== 'onboarding-kit' &&
+        cat !== '30-days-at-niat' &&
+        cat !== '30-days'
+      ) {
+        cats.add(cat);
+      }
+    });
+    return Array.from(cats);
+  }, [campusRecentPublishedArticles]);
+
   const hasWeek1 = thirtyDaysArticles.length > 0;
   const hasCampusLife = campusLifeVideos.length > 0;
   const hasClubs = campusClubs.length > 0;
-  const hasFood = foodArticles.length > 0;
-  const hasLiving = livingArticles.length > 0;
   const hasReviews = displayCampus.rating != null;
   const hasAbout = Boolean((displayCampus.description || "").trim() || displayCampus.googleMapLink);
+
   const navItems = [
     hasWeek1 ? { id: 'week1', label: '30 days', icon: Calendar } : undefined,
     hasCampusLife ? { id: 'campusLife', label: 'Campus Life', icon: Play } : undefined,
     hasClubs ? { id: 'clubs', label: 'Clubs', icon: Users } : undefined,
-    hasFood ? { id: 'food', label: 'Food', icon: Utensils } : undefined,
-    hasLiving ? { id: 'living', label: 'Living', icon: Home } : undefined,
+    ...otherCategories.map((cat) => {
+      const meta = categoryMeta[cat] || {
+        label: getCategoryConfig(cat).label,
+        icon: FileText,
+      };
+      return {
+        id: cat,
+        label: meta.label,
+        icon: meta.icon,
+      };
+    }),
     hasReviews ? { id: 'reviews', label: 'Reviews', icon: MessageSquare } : undefined,
     hasAbout ? { id: 'about', label: 'About', icon: Info } : undefined,
   ].filter((item): item is { id: string; label: string; icon: typeof Calendar } => Boolean(item));
@@ -142,7 +165,7 @@ export default function CampusPageClient({ campus, campusSlug, articleCount, api
       const scrollPosition = window.scrollY + 200;
       navItems.forEach(({ id: sectionId }) => {
         const ref = sectionRefs[sectionId as keyof typeof sectionRefs];
-        if (ref.current) {
+        if (ref?.current) {
           const { offsetTop, offsetHeight } = ref.current;
           if (scrollPosition >= offsetTop && scrollPosition < offsetTop + offsetHeight) {
             setActiveSection(sectionId);
@@ -200,10 +223,13 @@ export default function CampusPageClient({ campus, campusSlug, articleCount, api
                 ~{displayCampus.batchSize} students
               </span>
             )}
-            <span className="flex items-center">
+            <Link
+              href={`/articles${slugForLinks ? `?campus=${slugForLinks}` : ''}`}
+              className="flex items-center hover:text-white hover:underline transition-colors"
+            >
               <FileText className="h-4 w-4 mr-1" />
               {displayArticleCount} articles
-            </span>
+            </Link>
             {displayCampus.rating != null && displayCampus.rating > 0 && (
               <span className="flex items-center">
                 <Star className="h-4 w-4 text-[#f7b801] fill-[#f7b801] mr-1" />
@@ -256,7 +282,7 @@ export default function CampusPageClient({ campus, campusSlug, articleCount, api
             {thirtyDaysArticles.map((article) => (
               <Link
                 key={article.id}
-                href={article.campusId ? `/${slugForCampusId(article.campusId)}/article/${article.slug}` : `/article/${article.slug}`}
+                href={`/${slugForLinks}/article/${article.slug}`}
                 className="block bg-white rounded-lg shadow-card p-5 border-l-4 border-[#991b1b] hover:border-[#7f1d1d] transition-colors"
               >
                 <h3 className="font-bold text-black mb-2">{article.title.replace('Your first month at NIAT — ', '')}</h3>
@@ -366,61 +392,73 @@ export default function CampusPageClient({ campus, campusSlug, articleCount, api
           </Link>
         </section>}
 
-        {hasFood && <section ref={sectionRefs.food} className="mb-16">
-          <div className="flex items-center mb-4">
-            <Utensils className="h-6 w-6 text-[#991b1b] mr-3" />
-            <h2 className="font-display text-2xl font-bold text-black">Food</h2>
-          </div>
-          <p className="text-black mb-6">Where to eat at and around {displayCampus.name}</p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            {foodArticles.map((article) => (
-              <Link
-                key={article.id}
-                href={article.campusId ? `/${slugForCampusId(article.campusId)}/article/${article.slug}` : `/article/${article.slug}`}
-                className="block bg-white rounded-xl shadow-card overflow-hidden border border-transparent hover:border-[#991b1b]/30 transition-colors"
-              >
-                {article.coverImage && (
-                  <div className="h-32 w-full overflow-hidden">
-                    <ImageWithFallback src={article.coverImage} alt={article.title} loading="lazy" className="w-full h-full object-cover" />
-                  </div>
-                )}
-                <div className="p-4">
-                  <h3 className="font-display font-medium text-[#1e293b] mb-1 line-clamp-2">{article.title}</h3>
-                  <p className="text-sm text-[#64748b] line-clamp-2 mb-2">{article.excerpt}</p>
-                  <span className="text-xs text-[#94a3b8]">👍 {article.upvoteCount} upvotes</span>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>}
+        {otherCategories.map((catSlug) => {
+          const meta = categoryMeta[catSlug] || {
+            label: getCategoryConfig(catSlug).label,
+            icon: FileText,
+          };
+          const IconComponent = meta.icon;
+          const articlesOfCategory = campusRecentPublishedArticles
+            .filter((a) => a.category === catSlug)
+            .map(apiArticleToPageArticle);
 
-        {hasLiving && <section ref={sectionRefs.living} className="mb-16">
-          <div className="flex items-center mb-4">
-            <Home className="h-6 w-6 text-[#991b1b] mr-3" />
-            <h2 className="font-display text-2xl font-bold text-black">Living</h2>
-          </div>
-          <p className="text-black mb-6">Hostel, PG, and accommodation near {displayCampus.name}</p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            {livingArticles.map((article) => (
-              <Link
-                key={article.id}
-                href={article.campusId ? `/${slugForCampusId(article.campusId)}/article/${article.slug}` : `/article/${article.slug}`}
-                className="block bg-white rounded-xl shadow-card overflow-hidden border border-transparent hover:border-[#991b1b]/30 transition-colors"
-              >
-                {article.coverImage && (
-                  <div className="h-32 w-full overflow-hidden">
-                    <ImageWithFallback src={article.coverImage} alt={article.title} loading="lazy" className="w-full h-full object-cover" />
-                  </div>
-                )}
-                <div className="p-4">
-                  <h3 className="font-display font-medium text-[#1e293b] mb-1 line-clamp-2">{article.title}</h3>
-                  <p className="text-sm text-[#64748b] line-clamp-2 mb-2">{article.excerpt}</p>
-                  <span className="text-xs text-[#94a3b8]">👍 {article.upvoteCount} upvotes</span>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>}
+          if (articlesOfCategory.length === 0) return null;
+
+          return (
+            <section
+              key={catSlug}
+              ref={sectionRefs[catSlug as keyof typeof sectionRefs]}
+              className="mb-16"
+            >
+              <div className="flex items-center mb-4">
+                <IconComponent className="h-6 w-6 text-[#991b1b] mr-3" />
+                <h2 className="font-display text-2xl font-bold text-black">
+                  {meta.label}
+                </h2>
+              </div>
+              <p className="text-black mb-6">
+                Explore articles related to {meta.label.toLowerCase()} at {displayCampus.name}
+              </p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                {articlesOfCategory.map((article) => (
+                  <Link
+                    key={article.id}
+                    href={`/${slugForLinks}/article/${article.slug}`}
+                    className="flex bg-white rounded-xl shadow-card hover:shadow-lg border border-[rgba(30,41,59,0.08)] hover:border-[#991b1b]/30 overflow-hidden transition-all duration-300 group"
+                  >
+                    {article.coverImage && (
+                      <div className="relative w-28 sm:w-36 shrink-0 aspect-[4/3] sm:aspect-square overflow-hidden bg-slate-100">
+                        <ImageWithFallback
+                          src={article.coverImage}
+                          alt={article.title}
+                          loading="lazy"
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        />
+                      </div>
+                    )}
+                    <div className="p-4 flex flex-col justify-between flex-1 min-w-0">
+                      <div>
+                        <h3 className="font-display font-bold text-[#1e293b] text-sm sm:text-base mb-1 line-clamp-2 group-hover:text-[#991b1b] transition-colors leading-snug">
+                          {article.title}
+                        </h3>
+                        <p className="text-xs sm:text-sm text-[#64748b] line-clamp-2 sm:line-clamp-3 leading-relaxed">
+                          {article.excerpt}
+                        </p>
+                      </div>
+                      <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-50 text-[10px] sm:text-xs text-[#94a3b8]">
+                        <span>👍 {article.upvoteCount} upvotes</span>
+                        <span className="text-[#991b1b] font-medium group-hover:underline flex items-center gap-0.5">
+                          Read article <ChevronRight className="h-3 w-3" />
+                        </span>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          );
+        })}
 
         {hasReviews && <section ref={sectionRefs.reviews} className="mb-16">
           <div className="flex items-center mb-4">

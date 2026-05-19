@@ -47,7 +47,7 @@ export default async function CampusPage({ params }: PageProps) {
       next: { revalidate: 86400 },
       credentials: 'include',
     }),
-    fetch(`${API_BASE}/api/articles/?campus=${encodeURIComponent(String(campusApi.id))}`, {
+    fetch(`${API_BASE}/api/articles/articles/?campus=${encodeURIComponent(String(campusApi.id))}`, {
       next: { revalidate: 3600 },
       credentials: 'include',
     }),

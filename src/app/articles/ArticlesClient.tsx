@@ -102,7 +102,14 @@ export default function ArticlesClient() {
   const activeCategory = categoryParam && apiCategorySlugs.has(categoryParam) ? categoryParam : null;
   const activeCampusSlug = useMemo(() => {
     if (!campusParam) return null;
-    const bySlug = apiCampuses.find((c) => c.slug === campusParam);
+    const lowerParam = campusParam.toLowerCase();
+    const bySlug = apiCampuses.find(
+      (c) =>
+        c.slug.toLowerCase() === lowerParam ||
+        c.slug.toLowerCase() === `${lowerParam}-niat` ||
+        `${c.slug.toLowerCase()}-niat` === lowerParam ||
+        c.shortName?.toLowerCase() === lowerParam
+    );
     if (bySlug) return bySlug.slug;
     // Backward compatibility for old URLs using campus UUID.
     const byId = apiCampuses.find((c) => String(c.id) === campusParam);
@@ -110,7 +117,14 @@ export default function ArticlesClient() {
   }, [campusParam, apiCampuses]);
   const activeCampusId = useMemo(() => {
     if (!campusParam) return null;
-    const bySlug = apiCampuses.find((c) => c.slug === campusParam);
+    const lowerParam = campusParam.toLowerCase();
+    const bySlug = apiCampuses.find(
+      (c) =>
+        c.slug.toLowerCase() === lowerParam ||
+        c.slug.toLowerCase() === `${lowerParam}-niat` ||
+        `${c.slug.toLowerCase()}-niat` === lowerParam ||
+        c.shortName?.toLowerCase() === lowerParam
+    );
     if (bySlug) return String(bySlug.id);
     const byId = apiCampuses.find((c) => String(c.id) === campusParam);
     return byId ? String(byId.id) : null;

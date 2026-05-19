@@ -44,6 +44,8 @@ export const CATEGORY_ORDER: ArticleCategory[] = [
 /** Backend category slugs (articles API) may differ from frontend; map to display config. */
 const BACKEND_CATEGORY_LABELS: Record<string, string> = {
   'onboarding-kit': 'Onboarding Kit',
+  '30-days-at-niat': '30 Days at NIAT',
+  '30-days': '30 Days at NIAT',
   'survival-food': 'Survival & Food',
   'club-directory': 'Club Directory',
   'career-wins': 'Career & Wins',
@@ -64,6 +66,8 @@ export function getCategoryConfig(slug: string): { label: string; icon: string; 
 export function backendCategoryToFrontend(backendSlug: string): ArticleCategory | null {
   const map: Record<string, ArticleCategory> = {
     'onboarding-kit': 'campus-life',
+    '30-days-at-niat': 'campus-life',
+    '30-days': 'campus-life',
     'survival-food': 'campus-life',
     'club-directory': 'campus-life',
     'local-travel': 'campus-life',
