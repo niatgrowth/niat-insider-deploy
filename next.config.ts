@@ -1,16 +1,7 @@
 import type { NextConfig } from "next";
-import path from "path";
-import { fileURLToPath } from "url";
-
-// Turbopack picks a workspace root from lockfiles; a stray lockfile in the parent
-// folder makes it resolve modules from the wrong directory (no node_modules).
-const nextConfigDir = path.dirname(fileURLToPath(import.meta.url));
 
 const nextConfig: NextConfig = {
   devIndicators: false,
-  turbopack: {
-    root: nextConfigDir,
-  },
   async redirects() {
     return [
       {
