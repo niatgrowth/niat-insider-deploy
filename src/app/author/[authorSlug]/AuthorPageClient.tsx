@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faLinkedin } from '@fortawesome/free-brands-svg-icons';
-import { ChevronRight, MapPin, Clock } from 'lucide-react';
+import { ChevronRight, MapPin } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import ImageWithFallback from '@/components/ImageWithFallback';
@@ -114,10 +114,7 @@ export default function AuthorPageClient({ username, author, initialArticles, in
                       {article.title}
                     </h3>
                     <p className="text-[15px] leading-relaxed text-[#334155] line-clamp-2 mb-2">{article.excerpt}</p>
-                    <p className="text-[13px] text-[#64748b] flex items-center gap-1">
-                      <Clock className="h-3.5 w-3.5" />
-                      Updated {article.updated_days} days ago · 👍 {article.upvote_count} upvotes
-                    </p>
+
                   </div>
                 </Link>
               );

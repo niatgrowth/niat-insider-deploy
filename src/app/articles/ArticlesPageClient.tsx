@@ -65,9 +65,7 @@ function ArticleRow({
         <p className="text-[15px] leading-relaxed text-[#334155] line-clamp-2 mb-2">
           {article.excerpt}
         </p>
-        <p className="text-[13px] text-[#64748b]">
-          Updated {article.updatedDays} days ago · 👍 {article.upvoteCount} upvotes
-        </p>
+
       </div>
     </Link>
   );
@@ -127,6 +125,37 @@ export default function ArticlesPageClient({ initialArticles, initialNext, initi
   const [loadingMore, setLoadingMore] = useState(false);
   const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
   const loadMoreTriggerRef = useRef<HTMLDivElement | null>(null);
+
+  const [realCampusCounts, setRealCampusCounts] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    let active = true;
+    const fetchRealCounts = async () => {
+      try {
+        const counts: Record<string, number> = {};
+        await Promise.all(
+          campuses.map(async (c) => {
+            const res = await fetch(`${API_BASE}/api/articles/articles/?campus=${encodeURIComponent(String(c.id))}&status=published&page_size=1`);
+            if (res.ok) {
+              const data = await res.json();
+              if (active) {
+                counts[String(c.id)] = data.count ?? 0;
+              }
+            }
+          })
+        );
+        if (active) {
+          setRealCampusCounts(counts);
+        }
+      } catch (err) {
+        console.error("Failed to fetch real campus article counts:", err);
+      }
+    };
+    fetchRealCounts();
+    return () => {
+      active = false;
+    };
+  }, [campuses]);
 
   const apiCategorySlugs = useMemo(() => new Set(categories.map((c) => c.slug)), [categories]);
   const activeCategory = categoryParam && apiCategorySlugs.has(categoryParam) ? categoryParam : null;
@@ -280,16 +309,19 @@ export default function ArticlesPageClient({ initialArticles, initialNext, initi
                     >
                       All Campuses
                     </button>
-                    {campuses.map((c) => (
-                      <button
-                        key={c.id}
-                        onClick={() => setCampus(c.slug)}
-                        className={`w-full text-left px-4 py-2 text-sm flex items-start justify-between gap-3 ${activeCampusSlug === c.slug ? 'bg-[#fbf2f3] text-[#991b1b] font-medium' : 'text-[#1e293b] hover:bg-gray-50'}`}
-                      >
-                        <span className="min-w-0 break-words">{c.name}</span>
-                        <span className="text-[#64748b] shrink-0">{campusArticleCounts.get(String(c.id)) ?? 0}</span>
-                      </button>
-                    ))}
+                    {campuses.map((c) => {
+                      const count = realCampusCounts[String(c.id)] ?? campusArticleCounts.get(String(c.id)) ?? 0;
+                      return (
+                        <button
+                          key={c.id}
+                          onClick={() => setCampus(c.slug)}
+                          className={`w-full text-left px-4 py-2 text-sm flex items-start justify-between gap-3 ${activeCampusSlug === c.slug ? 'bg-[#fbf2f3] text-[#991b1b] font-medium' : 'text-[#1e293b] hover:bg-gray-50'}`}
+                        >
+                          <span className="min-w-0 break-words">{c.name}</span>
+                          <span className="text-[#64748b] shrink-0">{count}</span>
+                        </button>
+                      );
+                    })}
                   </div>
                 </>
               )}
@@ -320,14 +352,20 @@ export default function ArticlesPageClient({ initialArticles, initialNext, initi
             <div className="border-b border-[rgba(30,41,59,0.08)] mb-0" />
 
             {displayArticles.length === 0 ? (
-              <div className="py-12 text-center">
-                <p className="text-[#64748b] mb-4">No articles found for this filter.</p>
-                <div className="flex flex-wrap justify-center gap-4">
-                  <button onClick={() => router.push(pathname)} className="text-[#991b1b] font-medium hover:underline">→ Clear filters</button>
-                  <span className="text-[#94a3b8]">or</span>
-                  <Link href="/contribute" className="text-[#991b1b] font-medium hover:underline">→ Write this article</Link>
+              (next || loadingMore) ? (
+                <div className="py-12 flex justify-center items-center">
+                  <Spinner size="lg" className="text-[#991b1b]" />
                 </div>
-              </div>
+              ) : (
+                <div className="py-12 text-center">
+                  <p className="text-[#64748b] mb-4">No articles found for this filter.</p>
+                  <div className="flex flex-wrap justify-center gap-4">
+                    <button onClick={() => router.push(pathname)} className="text-[#991b1b] font-medium hover:underline">→ Clear filters</button>
+                    <span className="text-[#94a3b8]">or</span>
+                    <Link href="/contribute" className="text-[#991b1b] font-medium hover:underline">→ Write this article</Link>
+                  </div>
+                </div>
+              )
             ) : (
               <div className="divide-y divide-[rgba(30,41,59,0.08)]">
                 {displayArticles.map((a: ArticlePageArticle) => (
@@ -342,7 +380,7 @@ export default function ArticlesPageClient({ initialArticles, initialNext, initi
             )}
 
             <div ref={loadMoreTriggerRef} className="h-1 w-full" aria-hidden />
-            {next && (
+            {next && displayArticles.length > 0 && (
               <div className="pt-6 text-sm text-[#64748b]">
                 {loadingMore ? (
                   <div className="inline-flex items-center gap-2">
@@ -385,7 +423,6 @@ export default function ArticlesPageClient({ initialArticles, initialNext, initi
                         <Link href={url} className="block text-sm text-[#1e293b] hover:text-[#991b1b] hover:underline">
                           {a.title}
                         </Link>
-                        <span className="text-xs text-[#64748b]">👍 {a.upvoteCount} upvotes</span>
                       </li>
                     );
                   })}
@@ -395,14 +432,17 @@ export default function ArticlesPageClient({ initialArticles, initialNext, initi
               <div className="bg-white rounded-lg border border-[rgba(30,41,59,0.1)] p-4 shadow-[0_4px_12px_rgba(30,41,59,0.08)]">
                 <h3 className="font-display font-bold text-[#1e293b] mb-3">Browse by Campus</h3>
                 <ul className="space-y-3">
-                  {campuses.map((c) => (
-                    <li key={c.id}>
-                      <Link href={`/${c.slug}`} className="block text-sm text-[#1e293b] hover:text-[#991b1b] hover:underline">
-                        {c.name}
-                      </Link>
-                      <span className="text-xs text-[#64748b]">{campusArticleCounts.get(String(c.id)) ?? 0} articles</span>
-                    </li>
-                  ))}
+                  {campuses.map((c) => {
+                    const count = realCampusCounts[String(c.id)] ?? campusArticleCounts.get(String(c.id)) ?? 0;
+                    return (
+                      <li key={c.id}>
+                        <Link href={`/${c.slug}`} className="block text-sm text-[#1e293b] hover:text-[#991b1b] hover:underline">
+                          {c.name}
+                        </Link>
+                        <span className="text-xs text-[#64748b]">{count} articles</span>
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
 

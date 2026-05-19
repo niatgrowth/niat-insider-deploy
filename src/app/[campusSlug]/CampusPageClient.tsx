@@ -398,11 +398,13 @@ export default function CampusPageClient({ campus, campusSlug, articleCount, api
             icon: FileText,
           };
           const IconComponent = meta.icon;
-          const articlesOfCategory = campusRecentPublishedArticles
+          const allArticlesOfCategory = campusRecentPublishedArticles
             .filter((a) => a.category === catSlug)
             .map(apiArticleToPageArticle);
 
-          if (articlesOfCategory.length === 0) return null;
+          if (allArticlesOfCategory.length === 0) return null;
+
+          const articlesOfCategory = allArticlesOfCategory.slice(0, 6);
 
           return (
             <section
@@ -446,8 +448,7 @@ export default function CampusPageClient({ campus, campusSlug, articleCount, api
                           {article.excerpt}
                         </p>
                       </div>
-                      <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-50 text-[10px] sm:text-xs text-[#94a3b8]">
-                        <span>👍 {article.upvoteCount} upvotes</span>
+                      <div className="flex items-center justify-end mt-2 pt-2 border-t border-slate-50 text-[10px] sm:text-xs">
                         <span className="text-[#991b1b] font-medium group-hover:underline flex items-center gap-0.5">
                           Read article <ChevronRight className="h-3 w-3" />
                         </span>
@@ -456,6 +457,17 @@ export default function CampusPageClient({ campus, campusSlug, articleCount, api
                   </Link>
                 ))}
               </div>
+
+              {allArticlesOfCategory.length > 6 && (
+                <div className="flex justify-start">
+                  <Link
+                    href={`/articles?campus=${slugForLinks}&category=${catSlug}`}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 border-2 border-[#991b1b] text-[#991b1b] font-medium rounded-lg hover:bg-[#991b1b] hover:text-white transition-colors text-sm"
+                  >
+                    View all {meta.label.toLowerCase()} articles <ChevronRight className="h-4 w-4" />
+                  </Link>
+                </div>
+              )}
             </section>
           );
         })}
