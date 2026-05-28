@@ -3,8 +3,13 @@ import { API_BASE } from '@/lib/apiBase';
 type ArticleRow = {
   slug?: string;
   campus_slug?: string | null;
-  campus_id?: string | null;
+  campus_id?: string | number | null;
   is_global_guide?: boolean;
+};
+
+type CampusRow = {
+  id?: string | number;
+  slug?: string;
 };
 
 function nextPageUrl(data: unknown): string | null {
@@ -28,19 +33,43 @@ async function fetchAllPublishedArticleRows(): Promise<ArticleRow[]> {
   return rows;
 }
 
+async function fetchCampusSlugById(): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  const res = await fetch(`${API_BASE}/api/campuses/`, { next: { revalidate: 86400 } });
+  if (!res.ok) return map;
+  const data = await res.json();
+  const campuses: CampusRow[] = Array.isArray(data) ? data : (data.results ?? []);
+  for (const c of campuses) {
+    if (c.id != null && c.slug) {
+      map.set(String(c.id), c.slug);
+    }
+  }
+  return map;
+}
+
 /** `[campusSlug]/article/[articleSlug]` — campus-bound published articles only. */
 export async function getCampusArticleStaticParams(): Promise<
   Array<{ campusSlug: string; articleSlug: string }>
 > {
   try {
-    const rows = await fetchAllPublishedArticleRows();
+    const [rows, campusSlugById] = await Promise.all([
+      fetchAllPublishedArticleRows(),
+      fetchCampusSlugById(),
+    ]);
     const out: Array<{ campusSlug: string; articleSlug: string }> = [];
+    const seen = new Set<string>();
     for (const a of rows) {
       if (!a.slug) continue;
-      const isGlobal = a.is_global_guide === true && (!a.campus_id || !a.campus_slug);
+      const campusSlug =
+        (a.campus_slug ?? '').trim() ||
+        (a.campus_id != null ? (campusSlugById.get(String(a.campus_id)) ?? '') : '');
+      const isGlobal = a.is_global_guide === true && !campusSlug;
       if (isGlobal) continue;
-      if (!a.campus_slug) continue;
-      out.push({ campusSlug: String(a.campus_slug), articleSlug: String(a.slug) });
+      if (!campusSlug) continue;
+      const key = `${campusSlug}::${a.slug}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push({ campusSlug, articleSlug: String(a.slug) });
     }
     return out;
   } catch {
@@ -53,10 +82,14 @@ export async function getGlobalArticleStaticParams(): Promise<Array<{ slug: stri
   try {
     const rows = await fetchAllPublishedArticleRows();
     const out: Array<{ slug: string }> = [];
+    const seen = new Set<string>();
     for (const a of rows) {
       if (!a.slug) continue;
-      const isGlobal = a.is_global_guide === true && (!a.campus_id || !a.campus_slug);
+      const campusSlug = (a.campus_slug ?? '').trim();
+      const isGlobal = a.is_global_guide === true && !campusSlug;
       if (!isGlobal) continue;
+      if (seen.has(a.slug)) continue;
+      seen.add(a.slug);
       out.push({ slug: String(a.slug) });
     }
     return out;

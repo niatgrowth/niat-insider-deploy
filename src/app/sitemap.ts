@@ -1,5 +1,6 @@
 import type { MetadataRoute } from 'next'
 import { API_BASE } from '../lib/apiBase'
+import { getCampusArticleStaticParams, getGlobalArticleStaticParams } from '@/lib/articleStaticParams'
 
 const BASE_URL = 'https://www.niatinsider.com'
 
@@ -11,16 +12,6 @@ type CampusApi = {
 
 type ArticleApi = {
   slug?: string
-  updated_at?: string
-  campus_id?: string | null
-  campus_slug?: string | null
-  is_global_guide?: boolean
-}
-
-type ClubsApi = {
-  id?: string
-  slug?: string
-  campus_id?: string | null
   updated_at?: string
 }
 
@@ -39,7 +30,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   let campusRoutes: MetadataRoute.Sitemap = []
   let articleRoutes: MetadataRoute.Sitemap = []
-  const campusSlugById = new Map<string, string>()
+  const campusUpdatedAtBySlug = new Map<string, string | undefined>()
 
   try {
     const campusRes = await fetch(`${API_BASE}/api/campuses/`, {
@@ -50,7 +41,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       const data = await campusRes.json()
       const campuses: CampusApi[] = data.results ?? data
       campuses.forEach((c) => {
-        if (c.id != null && c.slug) campusSlugById.set(String(c.id), c.slug)
+        if (c.slug) campusUpdatedAtBySlug.set(c.slug, c.updated_at)
       })
       campusRoutes = campuses.map((c) => ({
         url: `${BASE_URL}/${c.slug}`,
@@ -64,6 +55,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }
 
   try {
+    const articleUpdatedAtBySlug = new Map<string, string | undefined>()
     const articles: ArticleApi[] = []
     let nextUrl: string | null = `${API_BASE}/api/articles/articles/?status=published&page_size=100`
     while (nextUrl) {
@@ -72,26 +64,39 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       const data: { results?: ArticleApi[]; next?: string | null } | ArticleApi[] = await articleRes.json()
       const batch: ArticleApi[] = Array.isArray(data) ? data : (data.results ?? [])
       articles.push(...batch)
+      for (const article of batch) {
+        if (article.slug) {
+          articleUpdatedAtBySlug.set(article.slug, article.updated_at)
+        }
+      }
       nextUrl = !Array.isArray(data) && typeof data.next === 'string' && data.next.length > 0 ? data.next : null
     }
-    articleRoutes = articles
-      .filter((a) => Boolean(a.slug))
-      .map((a) => {
-        const campusSlug =
-          (a.campus_slug ?? '').trim() ||
-          (a.campus_id != null ? campusSlugById.get(String(a.campus_id)) : '')
-        const isGlobal = a.is_global_guide === true && !campusSlug
-        if (!isGlobal && !campusSlug) return null
-        return {
-          url: isGlobal
-            ? `${BASE_URL}/article/${a.slug}`
-            : `${BASE_URL}/${campusSlug}/article/${a.slug}`,
-          lastModified: safeDate(a.updated_at),
-          priority: 0.8,
-          changeFrequency: 'monthly' as const,
-        }
-      })
-      .filter((route): route is NonNullable<typeof route> => route !== null)
+
+    const campusArticleParams = await getCampusArticleStaticParams()
+    const globalArticleParams = await getGlobalArticleStaticParams()
+
+    const campusArticleRoutes: MetadataRoute.Sitemap = campusArticleParams.map((p) => ({
+      url: `${BASE_URL}/${encodeURIComponent(p.campusSlug)}/article/${encodeURIComponent(p.articleSlug)}`,
+      lastModified: safeDate(
+        articleUpdatedAtBySlug.get(p.articleSlug) ?? campusUpdatedAtBySlug.get(p.campusSlug)
+      ),
+      priority: 0.8,
+      changeFrequency: 'monthly' as const,
+    }))
+
+    const globalArticleRoutes: MetadataRoute.Sitemap = globalArticleParams.map((p) => ({
+      url: `${BASE_URL}/article/${encodeURIComponent(p.slug)}`,
+      lastModified: safeDate(articleUpdatedAtBySlug.get(p.slug)),
+      priority: 0.8,
+      changeFrequency: 'monthly' as const,
+    }))
+
+    // Keep only unique, fully resolved published article URLs.
+    const deduped = new Map<string, MetadataRoute.Sitemap[number]>()
+    for (const route of [...campusArticleRoutes, ...globalArticleRoutes]) {
+      deduped.set(route.url, route)
+    }
+    articleRoutes = Array.from(deduped.values())
   } catch {
     // API unavailable at build time — skip dynamic article routes
   }

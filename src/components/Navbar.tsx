@@ -39,7 +39,8 @@ export default function Navbar({ searchQuery = '', showSearch }: NavbarProps) {
   const niatStatus = useAuthStore((state) => state.niatStatus);
   const hideWriteCtaForRole = role === AUTH_ROLES.niat || role === AUTH_ROLES.intermediate;
   const hideMyArticlesForRole = role === AUTH_ROLES.intermediate;
-  const hideLeaderboardForRole = role === AUTH_ROLES.intermediate;
+  const canShowLeaderboard =
+    role === AUTH_ROLES.niat || role === AUTH_ROLES.verifiedNiat;
   const isAuthenticated = Boolean(user);
   const authChecked = useAuthStore((state) => state.authChecked);
   const isOnboarded = useAuthStore((state) => state.isOnboarded);
@@ -187,7 +188,7 @@ export default function Navbar({ searchQuery = '', showSearch }: NavbarProps) {
               )}
               {showFullNav && (
                 <>
-                  {!hideLeaderboardForRole && (
+                  {canShowLeaderboard && (
                     <Link
                       href="/leaderboard"
                       className={`text-black hover:text-black text-sm font-medium transition-colors ${pathname === '/leaderboard' ? 'text-[#991b1b]' : ''}`}
@@ -396,12 +397,6 @@ export default function Navbar({ searchQuery = '', showSearch }: NavbarProps) {
               )}
               {showGuestNavLinks && (
                 <>
-                  <Link
-                    href="/leaderboard"
-                    className={`text-black hover:text-black text-sm font-medium transition-colors ${pathname === '/leaderboard' ? 'text-[#991b1b]' : ''}`}
-                  >
-                    Leaderboard
-                  </Link>
                   <Link href="/articles" className="text-black hover:text-black text-sm font-medium transition-colors">
                     Articles
                   </Link>
@@ -463,7 +458,7 @@ export default function Navbar({ searchQuery = '', showSearch }: NavbarProps) {
                 )}
                 {showFullNav && (
                   <>
-                    {!hideLeaderboardForRole && (
+                    {canShowLeaderboard && (
                       <Link
                         href="/leaderboard"
                         onClick={() => setMobileMenuOpen(false)}
@@ -514,13 +509,6 @@ export default function Navbar({ searchQuery = '', showSearch }: NavbarProps) {
                 )}
                 {showGuestNavLinks && (
                   <>
-                    <Link
-                      href="/leaderboard"
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="text-black hover:text-black text-sm font-medium"
-                    >
-                      Leaderboard
-                    </Link>
                     <Link href="/articles" onClick={() => setMobileMenuOpen(false)} className="text-black hover:text-black text-sm font-medium">
                       Articles
                     </Link>
