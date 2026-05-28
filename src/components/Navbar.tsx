@@ -3,7 +3,6 @@
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
-import useSWR from 'swr';
 import { Search, Menu, X, ChevronRight, PenLine, UserCircle, LogOut } from 'lucide-react';
 import { logout } from '../lib/authApi';
 import { useCampuses } from '../hooks/useCampuses';
@@ -14,7 +13,6 @@ import type { ApiArticle } from '../types/articleApi';
 import WriteArticleCTA from './WriteArticleCTA';
 import { AUTH_ROLES, WRITE_ENABLED_ROLES, useAuthStore } from '@/store/authStore';
 import { isProtectedAppPath } from '@/lib/protectedPaths';
-import { cn } from '@/lib/utils';
 import { Spinner } from '@/components/ui/spinner';
 
 interface NavbarProps {
@@ -54,26 +52,6 @@ export default function Navbar({ searchQuery = '', showSearch }: NavbarProps) {
   const onProtectedRoute = isProtectedAppPath(pathname);
   /** Proxy guarantees a session on these routes; avoid flashing guest links while bootstrap runs. */
   const showGuestNavLinks = !isAuthenticated && (!onProtectedRoute || authChecked);
-
-  const { data: unreadData } = useSWR(
-    showFullNav ? '/api/proxy/reviews/notifications/unread' : null,
-    async (url: string) => {
-      const res = await fetch(url);
-      if (!res.ok) {
-        const err = new Error('Failed to load notifications') as Error & { status?: number };
-        err.status = res.status;
-        throw err;
-      }
-      return res.json();
-    },
-    {
-      refreshInterval: 120_000,
-      revalidateOnFocus: false,
-      shouldRetryOnError: (err) => (err as { status?: number }).status !== 401,
-      errorRetryCount: 2,
-    }
-  );
-  const unreadCount: number = unreadData?.count ?? unreadData?.unread_count ?? 0;
 
   const { articles: publishedArticles, loading: recentArticlesLoading } = usePublishedArticles(
     { page_size: 12, ordering: 'updated_at' },
@@ -362,24 +340,6 @@ export default function Navbar({ searchQuery = '', showSearch }: NavbarProps) {
                     )}
                   </div>
 
-                  <Link
-                    href="/reviews"
-                    className={cn(
-                      'relative flex items-center gap-1.5 text-sm font-medium transition-colors hover:text-primary',
-                      pathname?.startsWith('/reviews')
-                        ? 'text-primary'
-                        : 'text-muted-foreground'
-                    )}
-                  >
-                    Q&A
-                    {unreadCount > 0 && (
-                      <span className="absolute -top-1 -right-2 flex h-2 w-2">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
-                      </span>
-                    )}
-                  </Link>
-
                   {!hideWriteCtaForRole && (
                     <WriteArticleCTA
                       label="Write Article"
@@ -525,18 +485,6 @@ export default function Navbar({ searchQuery = '', showSearch }: NavbarProps) {
                       className="text-black hover:text-black text-sm font-medium"
                     >
                       Articles
-                    </Link>
-                    <Link
-                      href="/reviews"
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="flex items-center justify-between py-2 text-sm font-medium"
-                    >
-                      <span>Q&A</span>
-                      {unreadCount > 0 && (
-                        <span className="inline-flex items-center justify-center h-5 min-w-5 px-1 text-xs font-bold text-white bg-red-500 rounded-full">
-                          {unreadCount > 99 ? '99+' : unreadCount}
-                        </span>
-                      )}
                     </Link>
                     {!hideWriteCtaForRole && (
                       <div onClick={() => setMobileMenuOpen(false)}>
