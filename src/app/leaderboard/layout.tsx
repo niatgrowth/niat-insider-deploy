@@ -1,23 +1,35 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'NIAT Insider Leaderboard | Top Student Writers by Campus',
+  title: 'NIAT Insider Leaderboard – Top Student Contributors by Campus',
   description:
-    'Explore the NIAT Insider leaderboard to see top student writers by campus, ranked by article views and contribution impact across NIAT communities.',
-  keywords: [
-    'niat insider leaderboard',
-    'niat top writers',
-    'niat student contributors',
-    'niat campus leaderboard',
-    'niat article rankings',
-    'niat insider top contributors',
-  ],
+    'See NIAT Insider’s top student contributors across campuses by impact and reach. Discover active voices, track rankings and get inspired to contribute.',
+  alternates: {
+    canonical: 'https://www.niatinsider.com/leaderboard',
+  },
   openGraph: {
-    title: 'NIAT Insider Leaderboard | Top Student Writers by Campus',
+    title: 'NIAT Insider Leaderboard – Top Student Contributors by Campus',
     description:
-      'Explore the NIAT Insider leaderboard to see top student writers by campus, ranked by article views and contribution impact across NIAT communities.',
+      'See NIAT Insider’s top student contributors across campuses by impact and reach. Discover active voices, track rankings and get inspired to contribute.',
     url: 'https://www.niatinsider.com/leaderboard',
+    siteName: 'NIAT Insider',
     type: 'website',
+    locale: 'en_IN',
+    images: [
+      {
+        url: 'https://www.niatinsider.com/og-default.png',
+        width: 1200,
+        height: 630,
+        alt: 'NIAT Insider',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'NIAT Insider Leaderboard – Top Student Contributors by Campus',
+    description:
+      'See NIAT Insider’s top student contributors across campuses by impact and reach. Discover active voices, track rankings and get inspired to contribute.',
+    images: ['https://www.niatinsider.com/og-default.png'],
   },
 };
 

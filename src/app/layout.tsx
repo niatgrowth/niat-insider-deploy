@@ -11,12 +11,9 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: {
-    default: "NIAT Insider | The Ultimate Guide to NIAT Campus Life",
-    template: "%s | NIAT Insider",
-  },
+  title: "NIAT Insider | Student Reviews, Campus Life & Admission Guides",
   description:
-    "Everything you need to know about NIAT. Read authentic student-written reviews, admission guides, campus life details, placements, clubs, and hostels at NIAT.",
+    "Read NIAT campus life reviews, hostel realities, admission guidance and placement insights from students. Compare campuses and start your NIAT journey confidently.",
   keywords: [
     "NIAT",
     "niat insider",
@@ -31,7 +28,7 @@ export const metadata: Metadata = {
   ],
   metadataBase: new URL("https://www.niatinsider.com"),
   alternates: {
-    canonical: "/",
+    canonical: "https://www.niatinsider.com",
   },
   robots: {
     index: true,
@@ -50,28 +47,28 @@ export const metadata: Metadata = {
     apple: ["/niat.svg"],
   },
   openGraph: {
-    type: "website",
+    title: "NIAT Insider | Student Reviews, Campus Life & Admission Guides",
+    description:
+      "Read NIAT campus life reviews, hostel realities, admission guidance and placement insights from students. Compare campuses and start your NIAT journey confidently.",
     url: "https://www.niatinsider.com",
     siteName: "NIAT Insider",
-    title: "NIAT Insider | The Ultimate Guide to NIAT Campus Life & Admissions",
-    description:
-      "Everything you need to know about NIAT. Read authentic student-written reviews, admission guides, campus life details, placements, clubs, and hostels at NIAT.",
+    type: "website",
+    locale: "en_IN",
     images: [
       {
-        url: "/og-default.png",
+        url: "https://www.niatinsider.com/og-default.png",
         width: 1200,
         height: 630,
-        alt: "NIAT Insider",
+        alt: "NIAT Insider | Student Reviews, Campus Life & Admission Guides",
       },
     ],
-    locale: "en_IN",
   },
   twitter: {
     card: "summary_large_image",
-    title: "NIAT Insider | The Ultimate Guide to NIAT Campus Life & Admissions",
+    title: "NIAT Insider | Student Reviews, Campus Life & Admission Guides",
     description:
-      "Everything you need to know about NIAT. Read authentic student-written reviews, admission guides, campus life details, placements, clubs, and hostels at NIAT.",
-    images: ["/og-default.png"],
+      "Read NIAT campus life reviews, hostel realities, admission guidance and placement insights from students. Compare campuses and start your NIAT journey confidently.",
+    images: ["https://www.niatinsider.com/og-default.png"],
   },
 };
 

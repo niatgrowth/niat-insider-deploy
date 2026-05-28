@@ -1,14 +1,32 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'NIAT Articles & Admission Reviews | NIAT Insider',
-  description: 'Browse hundreds of student-written articles covering NIAT admission tips, placement history, campus life, tech clubs, and unbiased hostel reviews for every NIAT campus.',
-  keywords: ['niat articles', 'niat placement reviews', 'niat campus life guide', 'niat admissions', 'niat student life'],
+  title: 'NIAT Student Articles & Reviews | NIAT Insider',
+  description: 'Explore NIAT student articles on campus life, academics, internships and placements. Get practical stories and tips to make smarter college decisions.',
+  alternates: {
+    canonical: 'https://www.niatinsider.com/articles',
+  },
   openGraph: {
-    title: 'NIAT Articles & Admission Reviews | NIAT Insider',
-    description: 'Browse hundreds of student-written articles covering NIAT admission tips, placement history, campus life, tech clubs, and unbiased hostel reviews for every NIAT campus.',
+    title: 'NIAT Student Articles & Reviews | NIAT Insider',
+    description: 'Explore NIAT student articles on campus life, academics, internships and placements. Get practical stories and tips to make smarter college decisions.',
     url: 'https://www.niatinsider.com/articles',
+    siteName: 'NIAT Insider',
     type: 'website',
+    locale: 'en_IN',
+    images: [
+      {
+        url: 'https://www.niatinsider.com/og-default.png',
+        width: 1200,
+        height: 630,
+        alt: 'NIAT Insider',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'NIAT Student Articles & Reviews | NIAT Insider',
+    description: 'Explore NIAT student articles on campus life, academics, internships and placements. Get practical stories and tips to make smarter college decisions.',
+    images: ['https://www.niatinsider.com/og-default.png'],
   },
 }
 

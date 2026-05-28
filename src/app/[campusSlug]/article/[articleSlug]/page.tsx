@@ -20,11 +20,56 @@ export async function generateStaticParams() {
   return getCampusArticleStaticParams();
 }
 
+async function getArticleBySlug(articleSlug: string): Promise<ApiArticle | null> {
+  const articleRes = await fetch(`${API_BASE}/api/articles/articles/${articleSlug}/`, {
+    next: { revalidate: 86400 },
+  });
+  if (!articleRes.ok) {
+    return null;
+  }
+  return (await articleRes.json()) as ApiArticle | null;
+}
+
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { campusSlug, articleSlug } = await params;
+  const article = await getArticleBySlug(articleSlug);
+  const metaTitle = (article as (ApiArticle & { meta_title?: string | null }) | null)?.meta_title;
+  const metaDescription = (article as (ApiArticle & { meta_description?: string | null }) | null)?.meta_description;
+  const ogImage =
+    (article as (ApiArticle & { og_image?: string | null }) | null)?.og_image ||
+    article?.cover_image ||
+    'https://www.niatinsider.com/og-default.png';
+  const title = metaTitle || article?.title || 'NIAT Student Article | NIAT Insider';
+  const description = metaDescription || article?.excerpt || 'Read this NIAT student article on NIAT Insider.';
+  const canonical = `https://www.niatinsider.com/${campusSlug}/article/${articleSlug}`;
+
   return {
+    title,
+    description,
     alternates: {
-      canonical: `https://www.niatinsider.com/${campusSlug}/article/${articleSlug}`,
+      canonical,
+    },
+    openGraph: {
+      title,
+      description,
+      url: canonical,
+      siteName: 'NIAT Insider',
+      type: 'article',
+      locale: 'en_IN',
+      images: [
+        {
+          url: ogImage,
+          width: 1200,
+          height: 630,
+          alt: title,
+        },
+      ],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [ogImage],
     },
     robots: { index: true, follow: true },
   };
@@ -44,13 +89,10 @@ export default async function ArticlePage({ params }: PageProps) {
     notFound();
   }
 
-  const articleRes = await fetch(`${API_BASE}/api/articles/articles/${articleSlug}/`, {
-    next: { revalidate: 86400 },
-  });
-  if (!articleRes.ok) {
+  const article = await getArticleBySlug(articleSlug);
+  if (!article) {
     notFound();
   }
-  const article = (await articleRes.json()) as ApiArticle | null;
   if (!article || !article.campus_id || String(article.campus_id) !== String(campusApi.id)) {
     notFound();
   }

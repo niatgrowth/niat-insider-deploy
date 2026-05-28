@@ -1,14 +1,32 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'About NIAT Insider | The Ultimate Student Guide for NIAT',
-  description: 'Learn about NIAT Insider. We are the premier platform for students to share genuine reviews, hostel details, clubs, and placement guides across all NIAT campuses.',
-  keywords: ['about niat', 'about niat insider', 'what is niat', 'niat university details'],
+  title: 'About NIAT Insider – Built by NIAT Students, for NIAT Students',
+  description: 'Discover how NIAT Insider helps students with trusted campus reviews, practical guidance and real stories. Join a student-first platform built for better choices.',
+  alternates: {
+    canonical: 'https://www.niatinsider.com/about',
+  },
   openGraph: {
-    title: 'About NIAT Insider | The Ultimate Student Guide for NIAT',
-    description: 'Learn about NIAT Insider. We are the premier platform for students to share genuine reviews, hostel details, clubs, and placement guides across all NIAT campuses.',
+    title: 'About NIAT Insider – Built by NIAT Students, for NIAT Students',
+    description: 'Discover how NIAT Insider helps students with trusted campus reviews, practical guidance and real stories. Join a student-first platform built for better choices.',
     url: 'https://www.niatinsider.com/about',
+    siteName: 'NIAT Insider',
     type: 'website',
+    locale: 'en_IN',
+    images: [
+      {
+        url: 'https://www.niatinsider.com/og-default.png',
+        width: 1200,
+        height: 630,
+        alt: 'NIAT Insider',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'About NIAT Insider – Built by NIAT Students, for NIAT Students',
+    description: 'Discover how NIAT Insider helps students with trusted campus reviews, practical guidance and real stories. Join a student-first platform built for better choices.',
+    images: ['https://www.niatinsider.com/og-default.png'],
   },
 }
 
