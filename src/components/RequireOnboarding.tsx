@@ -22,7 +22,7 @@ function FullPageSpinner() {
 
 /**
  * Client guard: guests never render protected children. Learners may be sent to onboarding.
- * Server session + middleware enforce cookies; this aligns Zustand after hydration.
+ * Server session + proxy enforce cookies; this aligns Zustand after hydration.
  */
 export default function RequireOnboarding({ children }: RequireOnboardingProps) {
   const router = useRouter();

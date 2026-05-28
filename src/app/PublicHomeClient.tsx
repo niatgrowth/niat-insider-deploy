@@ -183,7 +183,7 @@ export default function PublicHomeClient({ campuses, latestArticles, featuredArt
         </div>
       </section>
 
-      <Footer loadGuides={false} />
+      <Footer />
     </div>
   );
 }

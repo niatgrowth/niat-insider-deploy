@@ -17,7 +17,8 @@ import {
   useCampusLeaderboard,
   useMyCampusLeaderboard
 } from "@/hooks/useLeaderboard";
-import { useAuthStore } from "@/store/authStore";
+import { AUTH_ROLES, useAuthStore } from "@/store/authStore";
+import { useRouter } from "next/navigation";
 import { fetchFoundingEditorProfile } from "@/lib/authApi";
 import { getAuthorProfileHref } from "@/lib/authorRoute";
 import type {
@@ -87,10 +88,20 @@ function campusToDisplay(campus: CampusLeaderboardEntry, userCampusName: string 
 }
 
 export default function LeaderboardPageClient() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<Tab>("overall");
   const user = useAuthStore((state) => state.user);
+  const role = useAuthStore((state) => state.role);
+  const authChecked = useAuthStore((state) => state.authChecked);
   const isAuthenticated = !!user;
   const username = user?.username;
+
+  useEffect(() => {
+    if (!authChecked) return;
+    if (role === AUTH_ROLES.intermediate) {
+      router.replace("/home");
+    }
+  }, [authChecked, role, router]);
 
   // Fetch campus name from profile
   const [campusName, setCampusName] = useState<string | null>(null);
@@ -139,6 +150,10 @@ export default function LeaderboardPageClient() {
         "These highest-ranked students are those who consistently build, innovate, and perform.",
     };
   }, [activeTab]);
+
+  if (authChecked && role === AUTH_ROLES.intermediate) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-amber-50/30 to-indigo-50/20">

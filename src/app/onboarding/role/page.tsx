@@ -6,9 +6,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from "@/components/ui/button";
 import { setOnboardingRole } from "@/lib/api/profiles";
 import { useAuthStore } from "@/store/authStore";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
-
+import { Spinner } from "@/components/ui/spinner";
+import { notify } from "@/lib/toast";
 type SelectableRole = "intermediate_student" | "niat_student";
 
 export default function OnboardingRolePage() {
@@ -19,7 +18,6 @@ export default function OnboardingRolePage() {
   const isOnboarded = useAuthStore((s) => s.isOnboarded);
   const role = useAuthStore((s) => s.role);
   const [submittingRole, setSubmittingRole] = useState<SelectableRole | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authChecked) return;
@@ -38,28 +36,31 @@ export default function OnboardingRolePage() {
   }, [authChecked, user, isOnboarded, role, router]);
 
   const handleSelectRole = async (role: SelectableRole) => {
-    setError(null);
     setSubmittingRole(role);
     try {
       const data = await setOnboardingRole(role);
       setAuth({ role: data.role });
+      notify.success(
+        role === "intermediate_student"
+          ? "Intermediate student profile selected. Complete your details next."
+          : "NIAT student profile selected. Complete your verification details next."
+      );
       router.push("/onboarding/profile");
     } catch (err: unknown) {
-      const status = (err as { response?: { status?: number; data?: { detail?: string } } })?.response?.status;
-      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      const status = (err as { response?: { status?: number } })?.response?.status;
       if (status === 401) {
+        notify.error("Your session expired. Please sign in again.");
         router.push("/login");
         return;
       }
-      setError(detail ?? "Failed to save role. Please try again.");
+      notify.apiError(err, "Failed to save role. Please try again.");
     } finally {
       setSubmittingRole(null);
     }
   };
 
   return (
-    <div className="min-h-screen bg-white overflow-x-hidden">
-      <Navbar />
+    <div className="flex-1 overflow-x-hidden">
       <main className="bg-section relative overflow-hidden">
         <div className="pointer-events-none absolute -top-16 -left-16 h-72 w-72 rounded-full bg-[#991b1b]/10 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-20 -right-16 h-72 w-72 rounded-full bg-[#991b1b]/10 blur-3xl" />
@@ -73,12 +74,6 @@ export default function OnboardingRolePage() {
               Select the role that matches your current status to continue onboarding.
             </p>
           </div>
-
-          {error && (
-            <div className="mx-auto mb-6 max-w-2xl rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {error}
-            </div>
-          )}
 
           <div className="grid gap-6 md:grid-cols-2">
             <Card className="group border-[rgba(30,41,59,0.12)] shadow-card bg-white/95 backdrop-blur hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300">
@@ -97,7 +92,14 @@ export default function OnboardingRolePage() {
                   onClick={() => handleSelectRole("intermediate_student")}
                   disabled={submittingRole !== null}
                 >
-                  {submittingRole === "intermediate_student" ? "Saving..." : "Select Intermediate Student"}
+                  {submittingRole === "intermediate_student" ? (
+                    <span className="inline-flex items-center justify-center gap-2">
+                      <Spinner size="sm" className="border-white/30 border-t-white" />
+                      Saving…
+                    </span>
+                  ) : (
+                    "Select Intermediate Student"
+                  )}
                 </Button>
               </CardFooter>
             </Card>
@@ -118,14 +120,20 @@ export default function OnboardingRolePage() {
                   onClick={() => handleSelectRole("niat_student")}
                   disabled={submittingRole !== null}
                 >
-                  {submittingRole === "niat_student" ? "Saving..." : "Select NIAT Student"}
+                  {submittingRole === "niat_student" ? (
+                    <span className="inline-flex items-center justify-center gap-2">
+                      <Spinner size="sm" className="border-white/30 border-t-white" />
+                      Saving…
+                    </span>
+                  ) : (
+                    "Select NIAT Student"
+                  )}
                 </Button>
               </CardFooter>
             </Card>
           </div>
         </div>
       </main>
-      <Footer />
     </div>
   );
 }

@@ -9,14 +9,8 @@ import Footer from '@/components/Footer';
 import { loginByPhonePassword } from '@/lib/authApi';
 import { useAuthStore } from '@/store/authStore';
 import { Spinner } from '@/components/ui/spinner';
-
-function getErrorMessage(err: unknown): string {
-  if (err && typeof err === 'object' && 'response' in err) {
-    const res = (err as { response?: { data?: { detail?: string } } }).response;
-    if (res?.data?.detail && typeof res.data.detail === 'string') return res.data.detail;
-  }
-  return 'Something went wrong. Please try again.';
-}
+import { FadeIn } from '@/components/ui/fade-in';
+import { notify } from '@/lib/toast';
 
 export default function LoginClient() {
   const router = useRouter();
@@ -25,9 +19,8 @@ export default function LoginClient() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  // Must match middleware / RequireOnboarding / RequireSessionServer: they all use `from`.
+  // Must match proxy.ts / RequireOnboarding / RequireSessionServer: they all use `from`.
   const nextUrl = searchParams.get('from') ?? '/home';
 
   const phoneDigits = phone.replace(/\D/g, '');
@@ -36,24 +29,24 @@ export default function LoginClient() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isPhoneValid) {
-      setError('Mobile number must be exactly 10 digits.');
+      notify.error('Mobile number must be exactly 10 digits.');
       return;
     }
     if (!password) {
-      setError('Enter your password.');
+      notify.error('Enter your password.');
       return;
     }
     const p = phoneDigits;
-    setError(null);
     setLoading(true);
     try {
       await loginByPhonePassword(p, password);
       await useAuthStore.getState().bootstrapAuth({ force: true });
       useAuthStore.setState({ authChecked: true });
       window.dispatchEvent(new Event('niat:auth'));
+      notify.success('Welcome back! You are signed in.');
       router.replace(nextUrl.startsWith('/') ? nextUrl : '/home');
     } catch (e) {
-      setError(getErrorMessage(e));
+      notify.apiError(e, 'Could not sign in. Check your mobile number and password.');
     } finally {
       setLoading(false);
     }
@@ -63,9 +56,9 @@ export default function LoginClient() {
     <div className="min-h-screen bg-white overflow-x-hidden">
       <PublicNavbar />
       <main className="max-w-md mx-auto px-4 sm:px-6 py-8 sm:py-12 w-full min-w-0">
-        <div
+        <FadeIn
           className="rounded-2xl border border-[rgba(30,41,59,0.1)] p-5 sm:p-8 shadow-sm"
-          style={{ backgroundColor: '#fff8eb' }}
+          style={{ backgroundColor: '#fff8eb' } as React.CSSProperties}
         >
           <h1 className="font-playfair text-2xl font-bold text-[#1e293b] mb-2">
             Welcome back
@@ -89,7 +82,6 @@ export default function LoginClient() {
                 onChange={(e) => {
                   const val = e.target.value.replace(/\D/g, '').slice(0, 10);
                   setPhone(val);
-                  setError(null);
                 }}
                 placeholder="e.g. 9876543210"
                 autoComplete="tel"
@@ -110,10 +102,7 @@ export default function LoginClient() {
                   id="login-password"
                   type={showPassword ? 'text' : 'password'}
                   value={password}
-                  onChange={(e) => {
-                    setPassword(e.target.value);
-                    setError(null);
-                  }}
+                  onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter your password"
                   autoComplete="current-password"
                   suppressHydrationWarning
@@ -136,15 +125,6 @@ export default function LoginClient() {
               </div>
             </div>
 
-            {error && (
-              <p
-                className="text-sm text-red-700 bg-red-50 border border-red-200 px-3 py-2.5 rounded-xl"
-                role="alert"
-              >
-                {error}
-              </p>
-            )}
-
             <button
               type="submit"
               disabled={!isPhoneValid || !password || loading}
@@ -166,7 +146,7 @@ export default function LoginClient() {
               Register
             </Link>
           </p>
-        </div>
+        </FadeIn>
       </main>
       <Footer />
     </div>

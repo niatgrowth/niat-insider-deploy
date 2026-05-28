@@ -25,6 +25,12 @@
     "paths": {
       "@/*": [
         "./src/*"
+      ],
+      "@niat/reviews-ui": [
+        "./packages/reviews-ui/src/index.ts"
+      ],
+      "@niat/reviews-ui/*": [
+        "./packages/reviews-ui/src/*"
       ]
     }
   },

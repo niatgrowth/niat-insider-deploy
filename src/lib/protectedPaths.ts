@@ -1,4 +1,4 @@
-/** Path prefixes that require a session cookie (keep in sync with middleware). */
+/** Path prefixes that require a session cookie (keep in sync with proxy.ts matcher). */
 export const PROTECTED_PATH_PREFIXES = [
   '/home',
   '/write',
@@ -7,6 +7,7 @@ export const PROTECTED_PATH_PREFIXES = [
   '/my-articles',
   '/onboarding',
   '/settings',
+  '/reviews',
 ] as const;
 
 export function isProtectedAppPath(pathname: string): boolean {

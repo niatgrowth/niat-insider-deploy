@@ -19,6 +19,8 @@ import { isAuthenticated } from "../../../lib/auth";
 import { cn } from "@/lib/utils";
 import { Star } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
+import { LoadingScreen, Spinner } from "@/components/ui/spinner";
+import { notify } from "@/lib/toast";
 
 const STEPS = [
   {
@@ -94,7 +96,6 @@ export default function OnboardingReviewPage() {
   const [submitted, setSubmitted] = useState(false);
   const [step, setStep] = useState(1);
   const [data, setData] = useState<OnboardingReviewPayload>(initialPayload);
-  const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -118,7 +119,6 @@ export default function OnboardingReviewPage() {
 
   const update = <K extends keyof OnboardingReviewPayload>(key: K, value: OnboardingReviewPayload[K]) => {
     setData((prev) => ({ ...prev, [key]: value }));
-    setSubmitError(null);
   };
 
   const canProceed = () => {
@@ -136,15 +136,15 @@ export default function OnboardingReviewPage() {
     if (!canProceed()) return;
     if (isLastStep) {
       setSubmitting(true);
-      setSubmitError(null);
       submitOnboardingReview(data)
         .then(async () => {
           setSubmitted(true);
           await bootstrapAuth({ force: true });
+          notify.success("Thank you! Your onboarding review was submitted.");
           router.replace("/home");
         })
         .catch((err) => {
-          setSubmitError(err instanceof Error ? err.message : "Submission failed");
+          notify.apiError(err, "Could not submit your review. Please try again.");
         })
         .finally(() => setSubmitting(false));
     } else {
@@ -159,11 +159,7 @@ export default function OnboardingReviewPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
-        <div
-          className="animate-spin rounded-full border-2 border-[#fbf2f3] size-10 border-t-[#991b1b]"
-          role="status"
-          aria-label="Loading"
-        />
+        <LoadingScreen />
       </div>
     );
   }
@@ -272,12 +268,6 @@ export default function OnboardingReviewPage() {
         </div>
           </>
 
-          {submitError && (
-            <p className="text-sm text-red-600 mb-4" role="alert">
-              {submitError}
-            </p>
-          )}
-
           <div className="flex gap-3">
             {step > 1 && (
               <button
@@ -294,7 +284,16 @@ export default function OnboardingReviewPage() {
               disabled={!canProceed() || submitting}
               className="rounded-xl bg-[#991b1b] text-white font-medium py-2.5 px-5 hover:bg-[#7f1d1d] disabled:opacity-50"
             >
-              {submitting ? "Submitting…" : isLastStep ? "Submit & join community" : "Next"}
+              {submitting ? (
+                <span className="inline-flex items-center gap-2">
+                  <Spinner size="sm" className="border-white/30 border-t-white" />
+                  Submitting…
+                </span>
+              ) : isLastStep ? (
+                "Submit & join community"
+              ) : (
+                "Next"
+              )}
             </button>
           </div>
         </div>

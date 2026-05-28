@@ -1,12 +1,12 @@
 {
-    "rewrites": [
-        {
-            "source": "/talk-to-seniors",
-            "destination": "https://niat-ama.vercel.app/talk-to-seniors"
-        },
-        {
-            "source": "/talk-to-seniors/:path*",
-            "destination": "https://niat-ama.vercel.app/talk-to-seniors/:path*"
-        }
-    ]
+  "rewrites": [
+    {
+      "source": "/talk-to-seniors",
+      "destination": "https://niat-ama.vercel.app/talk-to-seniors"
+    },
+    {
+      "source": "/talk-to-seniors/:path*",
+      "destination": "https://niat-ama.vercel.app/talk-to-seniors/:path*"
+    }
+  ]
 }

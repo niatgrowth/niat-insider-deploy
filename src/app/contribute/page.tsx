@@ -9,6 +9,8 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import WriteArticleCTA from '@/components/WriteArticleCTA';
 import { useCampuses } from '@/hooks/useCampuses';
+import { notify } from '@/lib/toast';
+import { Spinner } from '@/components/ui/spinner';
 
 export default function Contribute() {
   const { campuses: apiCampuses } = useCampuses();
@@ -18,6 +20,7 @@ export default function Contribute() {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [tags, setTags] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   const contributionTypes = [
     { id: 'article', label: 'Write an article', icon: FileText, description: 'Most common' },
@@ -35,9 +38,22 @@ export default function Contribute() {
     'How-To'
   ];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    alert('Article submitted for review!');
+    if (!title.trim()) {
+      notify.error('Add a title before submitting.');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await new Promise((r) => setTimeout(r, 400));
+      notify.success('Article submitted for review! We will notify you when it is published.');
+      setTitle('');
+      setContent('');
+      setTags('');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -202,8 +218,19 @@ export default function Contribute() {
             </div>
 
             <div className="flex items-center justify-between">
-              <button type="submit" className="btn-primary text-lg px-8 py-3">
-                Submit for Review
+              <button
+                type="submit"
+                disabled={submitting}
+                className="btn-primary text-lg px-8 py-3 inline-flex items-center justify-center gap-2 disabled:opacity-60"
+              >
+                {submitting ? (
+                  <>
+                    <Spinner size="sm" className="border-white/30 border-t-white" />
+                    Submitting…
+                  </>
+                ) : (
+                  'Submit for Review'
+                )}
               </button>
             </div>
 

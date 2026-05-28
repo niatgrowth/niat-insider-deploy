@@ -255,7 +255,7 @@ export default function HomeClient({ campuses, latestArticles, featuredArticles 
         </div>
       </section>
 
-      <Footer loadGuides={false} />
+      <Footer />
 
       {showBadgeModal && badgeUsername && (
         <NiatBadgeModal

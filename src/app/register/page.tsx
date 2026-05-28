@@ -15,22 +15,8 @@ import {
 import { extractDjangoError } from '@/lib/utils/errors';
 import { useAuthStore } from '@/store/authStore';
 import { Spinner } from '@/components/ui/spinner';
-
-function getErrorMessage(err: unknown): string {
-  if (err && typeof err === 'object' && 'response' in err) {
-    const res = (err as { response?: { data?: Record<string, unknown> } }).response;
-    const d = res?.data;
-    if (d && typeof d === 'object') {
-      if (typeof d.detail === 'string' && d.detail.trim()) return d.detail.trim();
-      for (const key of ['username', 'phone', 'password']) {
-        const v = d[key];
-        if (typeof v === 'string' && v.trim()) return v.trim();
-        if (Array.isArray(v) && v[0] && typeof v[0] === 'string') return String(v[0]).trim();
-      }
-    }
-  }
-  return 'Something went wrong. Please try again.';
-}
+import { FadeIn } from '@/components/ui/fade-in';
+import { notify, getApiErrorMessage } from '@/lib/toast';
 
 export default function Register() {
   const router = useRouter();
@@ -45,8 +31,6 @@ export default function Register() {
   const [otpSent, setOtpSent] = useState(false);
   const [otpSending, setOtpSending] = useState(false);
   const [otpVerifying, setOtpVerifying] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
-  const [otpError, setOtpError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const phoneDigits = phone.replace(/\D/g, '');
@@ -56,17 +40,17 @@ export default function Register() {
 
   const handleSendOtp = async () => {
     if (!isPhoneValid) {
-      setOtpError('Mobile number must be exactly 10 digits.');
+      notify.error('Mobile number must be exactly 10 digits.');
       return;
     }
     const p = phoneDigits;
-    setOtpError(null);
     setOtpSending(true);
     try {
       await requestOtpByPhone(p, { for: 'register' });
       setOtpSent(true);
+      notify.success('Verification code sent to your phone.');
     } catch (e) {
-      setOtpError(getErrorMessage(e));
+      notify.apiError(e);
     } finally {
       setOtpSending(false);
     }
@@ -76,21 +60,20 @@ export default function Register() {
     const p = phoneDigits;
     const code = otpCode.replace(/\D/g, '').slice(0, 4);
     if (!p || code.length !== 4) {
-      setOtpError('Enter the 4-digit code.');
+      notify.error('Enter the 4-digit code.');
       return;
     }
-    setOtpError(null);
     setOtpVerifying(true);
     try {
       const res = await verifyOtpByPhone(p, code);
       if (res.verified) {
         setPhoneVerified(true);
-        setOtpError(null);
+        notify.success('Phone number verified. You can finish registration.');
       } else {
-        setOtpError('Invalid or expired code.');
+        notify.error('Invalid or expired code. Request a new one.');
       }
     } catch (e) {
-      setOtpError(getErrorMessage(e));
+      notify.apiError(e);
     } finally {
       setOtpVerifying(false);
     }
@@ -99,7 +82,6 @@ export default function Register() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSubmit) return;
-    setSubmitError(null);
     setLoading(true);
     try {
       try {
@@ -115,15 +97,15 @@ export default function Register() {
             : null;
         const message = responseData
           ? extractDjangoError(responseData)
-          : getErrorMessage(error);
-        setSubmitError(message);
+          : getApiErrorMessage(error);
+        notify.error(message);
         return;
       }
 
       try {
         await loginByUsernamePassword(username.trim(), password);
       } catch {
-        setSubmitError('Account created! Please login manually.');
+        notify.success('Account created! Please sign in to continue.');
         router.replace('/login');
         return;
       }
@@ -131,9 +113,10 @@ export default function Register() {
       try {
         await useAuthStore.getState().bootstrapAuth({ force: true });
         window.dispatchEvent(new Event('niat:auth'));
+        notify.success('Welcome to NIAT Insider! Let’s set up your profile.');
         router.replace('/onboarding/role');
       } catch (e) {
-        setSubmitError(getErrorMessage(e));
+        notify.apiError(e);
       }
     } finally {
       setLoading(false);
@@ -144,7 +127,7 @@ export default function Register() {
     <div className="min-h-screen bg-white overflow-x-hidden">
       <PublicNavbar />
       <main className="max-w-md mx-auto px-4 sm:px-6 py-8 sm:py-12 w-full min-w-0">
-        <div
+        <FadeIn
           className="rounded-2xl border border-[rgba(30,41,59,0.1)] p-5 sm:p-8 shadow-sm"
           style={{ backgroundColor: '#fff8eb' }}
         >
@@ -156,15 +139,6 @@ export default function Register() {
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {submitError && (
-              <p
-                className="text-sm text-red-700 bg-red-50 border border-red-200 px-3 py-2.5 rounded-xl"
-                role="alert"
-              >
-                {submitError}
-              </p>
-            )}
-
             <div>
               <label htmlFor="reg-username" className="block text-sm font-medium text-[#1e293b] mb-1.5">
                 Username
@@ -196,7 +170,6 @@ export default function Register() {
                     onChange={(e) => {
                       const val = e.target.value.replace(/\D/g, '').slice(0, 10);
                       setPhone(val);
-                      setOtpError(null);
                     }}
                     readOnly={phoneVerified}
                     className={`w-full rounded-xl border bg-white px-3 py-2 text-sm text-[#1e293b] focus:outline-none focus:ring-2 focus:ring-[#991b1b] ${
@@ -224,11 +197,6 @@ export default function Register() {
                   </button>
                 )}
               </div>
-              {otpError && (
-                <p className="mt-2 text-sm text-red-700 bg-red-50 px-3 py-2 rounded-xl" role="alert">
-                  {otpError}
-                </p>
-              )}
               {!phoneVerified && otpSent && (
                 <div className="mt-3 flex gap-2 items-end">
                   <input
@@ -238,7 +206,6 @@ export default function Register() {
                     value={otpCode}
                     onChange={(e) => {
                       setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 4));
-                      setOtpError(null);
                     }}
                     placeholder="0000"
                     className="w-24 rounded-xl border border-[rgba(30,41,59,0.15)] bg-white px-3 py-2 text-sm text-[#1e293b] focus:outline-none focus:ring-2 focus:ring-[#991b1b]"
@@ -331,7 +298,7 @@ export default function Register() {
               Log in
             </Link>
           </p>
-        </div>
+        </FadeIn>
       </main>
       <Footer />
     </div>

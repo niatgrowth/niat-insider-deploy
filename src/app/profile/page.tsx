@@ -26,6 +26,7 @@ import { useAuthStore } from '@/store/authStore';
 import { getMyProfile, upsertIntermediateProfile, upsertNiatProfile } from '@/lib/api/profiles';
 import { API_BASE } from '@/lib/apiBase';
 import NiatBadgeModal from '@/components/NiatBadgeModal';
+import { notify } from '@/lib/toast';
 import {
   assertFileUnderMaxBytes,
   FILE_SIZE_HINT_ID_CARD,
@@ -295,8 +296,11 @@ export default function Profile() {
         setNiatProfilePictureFile(null);
       }
       setSaved(true);
+      notify.success('Profile updated successfully.');
     } catch (err: unknown) {
-      setProfileSaveError(parseBackendError(err));
+      const msg = parseBackendError(err);
+      setProfileSaveError(msg);
+      notify.error(msg);
     } finally {
       setSaving(false);
     }
@@ -324,18 +328,20 @@ export default function Profile() {
         current_password: currentPassword,
         new_password: newPassword,
       });
+      notify.success(res.detail || 'Password updated successfully.');
       setSettingsMessage(res.detail);
       setCurrentPassword('');
       setNewPassword('');
       setConfirmNewPassword('');
     } catch (err: unknown) {
       const res = err as { response?: { data?: { detail?: string; current_password?: string; new_password?: string } } };
-      setSettingsError(
+      const msg =
         res?.response?.data?.current_password ||
-          res?.response?.data?.new_password ||
-          res?.response?.data?.detail ||
-          'Failed to update password.'
-      );
+        res?.response?.data?.new_password ||
+        res?.response?.data?.detail ||
+        'Failed to update password.';
+      setSettingsError(msg);
+      notify.error(msg);
     } finally {
       setSettingsLoading(false);
     }
@@ -359,6 +365,9 @@ export default function Profile() {
         branch_other: updated.branch_other ?? '',
       });
       setIntermediateSaved(true);
+      notify.success('Intermediate profile saved.');
+    } catch (err: unknown) {
+      notify.error(parseBackendError(err));
     } finally {
       setIntermediateSaving(false);
     }
@@ -375,9 +384,15 @@ export default function Profile() {
     try {
       const res = await checkUsernameAvailability(newUsername);
       setUsernameAvailable(res.available);
-      if (res.available) setSettingsMessage('Username is available.');
-      else setSettingsError('Username is not available.');
+      if (res.available) {
+        notify.success('Username is available.');
+        setSettingsMessage('Username is available.');
+      } else {
+        notify.error('Username is not available.');
+        setSettingsError('Username is not available.');
+      }
     } catch {
+      notify.error('Failed to check username availability.');
       setSettingsError('Failed to check username availability.');
       setUsernameAvailable(null);
     } finally {
@@ -402,10 +417,12 @@ export default function Profile() {
       await updateMeProfile({ username: newUsername.trim() });
       const updatedMe = await fetchMe();
       setMe(updatedMe);
+      notify.success('Username updated successfully.');
       setSettingsMessage('Username has been updated.');
       setNewUsername('');
       setUsernameAvailable(null);
     } catch {
+      notify.error('Failed to update username.');
       setSettingsError('Failed to update username.');
     } finally {
       setSettingsLoading(false);
@@ -424,10 +441,13 @@ export default function Profile() {
     try {
       const res = await requestChangePhoneOtp(digits);
       setPhoneOtpSent(true);
+      notify.success(res.detail || 'Verification code sent to your new number.');
       setSettingsMessage(res.detail);
     } catch (err: unknown) {
       const res = err as { response?: { data?: { detail?: string; phone_number?: string } } };
-      setSettingsError(res?.response?.data?.phone_number || res?.response?.data?.detail || 'Failed to send OTP.');
+      const msg = res?.response?.data?.phone_number || res?.response?.data?.detail || 'Failed to send OTP.';
+      setSettingsError(msg);
+      notify.error(msg);
     } finally {
       setSettingsLoading(false);
     }
@@ -451,18 +471,20 @@ export default function Profile() {
       const res = await confirmChangePhone(digits, phoneOtpCode.trim());
       const updatedMe = await fetchMe();
       setMe(updatedMe);
+      notify.success(res.detail || 'Mobile number updated successfully.');
       setSettingsMessage(res.detail);
       setPhoneOtpSent(false);
       setPhoneOtpCode('');
       setNewPhoneNumber('');
     } catch (err: unknown) {
       const res = err as { response?: { data?: { detail?: string; phone_number?: string; code?: string } } };
-      setSettingsError(
+      const msg =
         res?.response?.data?.phone_number ||
-          res?.response?.data?.code ||
-          res?.response?.data?.detail ||
-          'Failed to update phone number.'
-      );
+        res?.response?.data?.code ||
+        res?.response?.data?.detail ||
+        'Failed to update phone number.';
+      setSettingsError(msg);
+      notify.error(msg);
     } finally {
       setSettingsLoading(false);
     }

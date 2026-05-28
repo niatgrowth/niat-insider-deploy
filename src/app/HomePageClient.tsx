@@ -233,7 +233,7 @@ export default function HomePageClient({ campuses, latestArticles, featuredArtic
         </div>
       </section>
 
-      <Footer loadGuides={false} />
+      <Footer />
     </div>
   );
 }

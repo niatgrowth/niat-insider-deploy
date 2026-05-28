@@ -10,8 +10,6 @@ import { completeOnboarding, updateMeProfile } from "@/lib/authApi";
 import { upsertIntermediateProfile, upsertNiatProfile } from "@/lib/api/profiles";
 import { useAuthStore } from "@/store/authStore";
 import { CampusSelector } from "@/components/onboarding/CampusSelector";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
 import {
   assertFileUnderMaxBytes,
   FILE_SIZE_HINT_ID_CARD,
@@ -19,6 +17,8 @@ import {
   MAX_PROFILE_UPLOAD_FILE_BYTES,
 } from "@/lib/fileUploadLimits";
 import { parseBackendError } from "@/lib/parseBackendError";
+import { Spinner } from "@/components/ui/spinner";
+import { notify } from "@/lib/toast";
 
 const START_YEAR = 2024;
 const currentYear = new Date().getFullYear();
@@ -38,7 +38,6 @@ export default function OnboardingProfilePage() {
   const bootstrapAuth = useAuthStore((s) => s.bootstrapAuth);
 
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const [collegeName, setCollegeName] = useState("");
   const [branch, setBranch] = useState<"MPC" | "BIPC" | "OTHERS" | "">("");
@@ -210,18 +209,19 @@ export default function OnboardingProfilePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!role) return;
-    setError(null);
     setSubmitting(true);
     try {
       if (role === "intermediate_student") {
         await submitIntermediate();
+        notify.success("Profile saved! Welcome to NIAT Insider.");
       } else if (role === "niat_student") {
         await submitNiat();
+        notify.success("Profile submitted! Complete your campus review next.");
       } else {
-        setError("Selected role is not supported for onboarding.");
+        notify.error("Selected role is not supported for onboarding.");
       }
     } catch (err: unknown) {
-      setError(parseBackendError(err));
+      notify.error(parseBackendError(err));
     } finally {
       setSubmitting(false);
     }
@@ -230,8 +230,7 @@ export default function OnboardingProfilePage() {
   if (!role) return null;
 
   return (
-    <div className="min-h-screen bg-white overflow-x-hidden">
-      <Navbar />
+    <div className="flex-1 overflow-x-hidden">
       <main className="bg-section relative overflow-hidden">
         <div className="pointer-events-none absolute -top-12 -right-16 h-72 w-72 rounded-full bg-[#991b1b]/10 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-20 -left-16 h-72 w-72 rounded-full bg-[#991b1b]/10 blur-3xl" />
@@ -250,12 +249,6 @@ export default function OnboardingProfilePage() {
           </CardHeader>
 
           <CardContent>
-            {error && (
-              <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                {error}
-              </div>
-            )}
-
             <form id="onboarding-profile-form" onSubmit={handleSubmit} className="space-y-4">
               {role === "intermediate_student" && (
                 <>
@@ -455,13 +448,19 @@ export default function OnboardingProfilePage() {
               disabled={submitting}
               className="w-full bg-[#991b1b] hover:bg-[#b91c1c] text-white shadow-sm hover:shadow-md transition-all"
             >
-              {submitting ? "Submitting..." : "Submit and Continue"}
+              {submitting ? (
+                <span className="inline-flex items-center justify-center gap-2">
+                  <Spinner size="sm" className="border-white/30 border-t-white" />
+                  Submitting…
+                </span>
+              ) : (
+                "Submit and Continue"
+              )}
             </Button>
           </CardFooter>
           </Card>
         </div>
       </main>
-      <Footer />
     </div>
   );
 }

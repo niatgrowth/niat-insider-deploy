@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import Script from "next/script";
 import AuthBootstrapper from "@/components/AuthBootstrapper";
+import AppToaster from "@/components/AppToaster";
+import SWRProvider from "@/components/SWRProvider";
 import "./globals.css";
 
 const inter = Inter({
@@ -106,8 +108,11 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
         />
-        <AuthBootstrapper />
-        {children}
+        <SWRProvider>
+          <AuthBootstrapper />
+          {children}
+          <AppToaster />
+        </SWRProvider>
       </body>
     </html>
   );

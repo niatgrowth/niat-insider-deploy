@@ -1,0 +1,58 @@
+/* NIAT Reviews design tokens — import in reviews layout */
+:root {
+  --primary: #991b1b;
+  --primary-light: #b91c1c;
+  --primary-dark: #7f1d1d;
+  --secondary: #7678ed;
+  --secondary-light: #9496f0;
+  --secondary-dark: #5a5cb8;
+  --accent-1: #f7b801;
+  --accent-2: #f18701;
+  --accent-3: #f35b04;
+  --niat-navbar: #fff8eb;
+  --niat-section: #fbf2f3;
+  --niat-text: #1e293b;
+  --niat-text-secondary: rgba(30, 41, 59, 0.7);
+  --niat-border: rgba(30, 41, 59, 0.1);
+  --hero-from: #220000;
+  --hero-to: #974039;
+  --primary-foreground: #ffffff;
+  --secondary-foreground: #ffffff;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.shadow-soft {
+  box-shadow: 0 1px 3px rgba(30, 41, 59, 0.08);
+}
+
+.bg-niat-section {
+  background-color: var(--niat-section);
+}
+.bg-niat-navbar {
+  background-color: var(--niat-navbar);
+}
+.border-niat-border {
+  border-color: var(--niat-border);
+}
+.text-niat-text {
+  color: var(--niat-text);
+}
+.text-niat-text-secondary {
+  color: var(--niat-text-secondary);
+}
+.text-primary {
+  color: var(--primary);
+}
+.bg-primary {
+  background-color: var(--primary);
+}
+.text-primary-foreground {
+  color: var(--primary-foreground);
+}

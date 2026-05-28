@@ -1,0 +1,33 @@
+{
+  "name": "@niat/reviews-ui",
+  "version": "0.1.0",
+  "private": true,
+  "sideEffects": [
+    "./src/styles/reviews-tokens.css"
+  ],
+  "exports": {
+    ".": "./src/index.ts",
+    "./styles.css": "./src/styles/reviews-tokens.css",
+    "./pages/SeniorDashboardPage": "./src/pages/SeniorDashboardPage.tsx",
+    "./pages/QuestionsPage": "./src/pages/QuestionsPage.tsx",
+    "./pages/ProspectiveHomePage": "./src/pages/ProspectiveHomePage.tsx",
+    "./components/AppChrome": "./src/components/AppChrome.tsx",
+    "./context/ReviewsUiContext": "./src/context/ReviewsUiContext.tsx",
+    "./hooks/useFAQs": "./src/hooks/useFAQs.ts",
+    "./hooks/useQuestionCategories": "./src/hooks/useQuestionCategories.ts",
+    "./hooks/useQuestions": "./src/hooks/useQuestions.ts"
+  },
+  "peerDependencies": {
+    "@tanstack/react-query": "^5.28.0",
+    "lucide-react": ">=0.400.0",
+    "next": ">=14.0.0",
+    "react": ">=18.0.0",
+    "react-dom": ">=18.0.0",
+    "react-markdown": ">=9.0.0",
+    "remark-gfm": ">=4.0.0"
+  },
+  "dependencies": {
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^3.5.0"
+  }
+}
