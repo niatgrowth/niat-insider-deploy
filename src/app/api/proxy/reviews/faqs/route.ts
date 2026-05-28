@@ -27,7 +27,7 @@ const getCachedFaqs = unstable_cache(
 );
 
 /** Route segment ISR — reuse cached FAQs without hitting Django every request. */
-export const revalidate = FAQ_REVALIDATE_SECONDS;
+export const revalidate = 300;
 
 export async function GET(request: NextRequest) {
   const limit = request.nextUrl.searchParams.get('limit');

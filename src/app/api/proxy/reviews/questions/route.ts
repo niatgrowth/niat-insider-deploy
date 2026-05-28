@@ -8,7 +8,7 @@ import {
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL ?? '').replace(/\/$/, '');
 
-export const revalidate = QUESTIONS_LIST_REVALIDATE_SECONDS;
+export const revalidate = 120;
 
 export async function GET(request: NextRequest) {
   const session = await requireProxySession();

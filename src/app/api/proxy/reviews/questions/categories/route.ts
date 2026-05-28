@@ -5,7 +5,7 @@ import {
   getCachedAuthedProxyGet,
 } from '@/lib/reviews/cachedProxyReads';
 
-export const revalidate = CATEGORY_REVALIDATE_SECONDS;
+export const revalidate = 600;
 
 export async function GET() {
   const session = await requireProxySession();
